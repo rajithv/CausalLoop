@@ -158,6 +158,7 @@ Risk: 25`
         const lines = text.split('\n').map(line => line.trim()).filter(line => line);
         const connections = [];
         const nodeValues = new Map();
+        const perturbationAmounts = new Map();
         
         lines.forEach(line => {
             // Parse connections: A -> B (0.8, +)
@@ -173,16 +174,17 @@ Risk: 25`
                 return;
             }
             
-            // Parse node values: A: 50
-            const valueMatch = line.match(/(\w+):\s*([0-9.]+)/);
+            // Parse node values with optional perturbation: A: 50 (5) or A: 50
+            const valueMatch = line.match(/(\w+):\s*([0-9.]+)(?:\s*\(([0-9.]+)\))?/);
             if (valueMatch) {
-                const [, node, value] = valueMatch;
+                const [, node, value, perturbAmount] = valueMatch;
                 nodeValues.set(node, parseFloat(value));
+                perturbationAmounts.set(node, perturbAmount ? parseFloat(perturbAmount) : 5); // Default to 5
                 return;
             }
         });
         
-        return { connections, nodeValues };
+        return { connections, nodeValues, perturbationAmounts };
     }
 
     buildGraphFromText() {
@@ -193,14 +195,14 @@ Risk: 25`
         }
 
         try {
-            const { connections, nodeValues } = this.parseGraphText(input);
-            this.buildGraph(connections, nodeValues);
+            const { connections, nodeValues, perturbationAmounts } = this.parseGraphText(input);
+            this.buildGraph(connections, nodeValues, perturbationAmounts);
         } catch (error) {
             alert('Error parsing graph definition: ' + error.message);
         }
     }
 
-    buildGraph(connections, nodeValues) {
+    buildGraph(connections, nodeValues, perturbationAmounts = new Map()) {
         // Clear existing graph
         this.nodes.clear();
         this.edges = [];
@@ -218,9 +220,11 @@ Risk: 25`
         // Create nodes
         nodeNames.forEach(name => {
             const value = nodeValues.get(name) || 50; // Default value
+            const perturbAmount = perturbationAmounts.get(name) || 5; // Default perturbation
             this.nodes.set(name, {
                 name: name,
                 value: value,
+                perturbationAmount: perturbAmount,
                 x: 0,
                 y: 0,
                 element: null
@@ -274,6 +278,22 @@ Risk: 25`
         circle.setAttribute('r', 25);
         group.appendChild(circle);
         
+        // Increase arrow (above node)
+        const increaseArrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        increaseArrow.setAttribute('points', `${node.x-8},${node.y-35} ${node.x+8},${node.y-35} ${node.x},${node.y-45}`);
+        increaseArrow.classList.add('control-arrow', 'increase-arrow');
+        increaseArrow.setAttribute('data-node', node.name);
+        increaseArrow.setAttribute('data-action', 'increase');
+        group.appendChild(increaseArrow);
+        
+        // Decrease arrow (below node)
+        const decreaseArrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        decreaseArrow.setAttribute('points', `${node.x-8},${node.y+35} ${node.x+8},${node.y+35} ${node.x},${node.y+45}`);
+        decreaseArrow.classList.add('control-arrow', 'decrease-arrow');
+        decreaseArrow.setAttribute('data-node', node.name);
+        decreaseArrow.setAttribute('data-action', 'decrease');
+        group.appendChild(decreaseArrow);
+        
         // Node label
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', node.x);
@@ -293,6 +313,10 @@ Risk: 25`
         node.element = group;
         node.valueElement = value;
         this.svg.appendChild(group);
+        
+        // Add event listeners for the arrows
+        increaseArrow.addEventListener('click', () => this.perturbNode(node.name, 'increase'));
+        decreaseArrow.addEventListener('click', () => this.perturbNode(node.name, 'decrease'));
     }
 
     renderEdge(edge) {
@@ -367,10 +391,62 @@ Risk: 25`
             valueDisplay.classList.add('node-value-display');
             valueDisplay.textContent = Math.round(node.value);
             
+            // Perturbation amount control
+            const perturbLabel = document.createElement('label');
+            perturbLabel.textContent = 'Δ:';
+            perturbLabel.classList.add('perturb-label');
+            
+            const perturbSpinner = document.createElement('input');
+            perturbSpinner.type = 'number';
+            perturbSpinner.min = '0.1';
+            perturbSpinner.max = '50';
+            perturbSpinner.step = '0.1';
+            perturbSpinner.value = node.perturbationAmount || 5;
+            perturbSpinner.classList.add('perturb-spinner');
+            perturbSpinner.addEventListener('change', (e) => {
+                const newAmount = parseFloat(e.target.value);
+                if (newAmount > 0) {
+                    node.perturbationAmount = newAmount;
+                }
+            });
+            
             controlDiv.appendChild(label);
             controlDiv.appendChild(slider);
             controlDiv.appendChild(valueDisplay);
+            controlDiv.appendChild(perturbLabel);
+            controlDiv.appendChild(perturbSpinner);
             container.appendChild(controlDiv);
+        });
+    }
+    
+    perturbNode(nodeName, action) {
+        const node = this.nodes.get(nodeName);
+        if (!node) return;
+        
+        const perturbationAmount = node.perturbationAmount || 5; // Use node-specific amount
+        const oldValue = node.value;
+        
+        if (action === 'increase') {
+            node.value = Math.min(100, node.value + perturbationAmount);
+        } else if (action === 'decrease') {
+            node.value = Math.max(0, node.value - perturbationAmount);
+        }
+        
+        // Update visual elements
+        if (node.valueElement) {
+            node.valueElement.textContent = Math.round(node.value);
+        }
+        
+        // Update corresponding slider
+        const nodeControls = document.querySelectorAll('.node-control');
+        nodeControls.forEach(control => {
+            const label = control.querySelector('label');
+            if (label && label.textContent === nodeName + ':') {
+                const slider = control.querySelector('input[type="range"]');
+                const display = control.querySelector('.node-value-display');
+                if (slider) slider.value = node.value;
+                if (display) display.textContent = Math.round(node.value);
+            }
         });
     }
 
@@ -479,10 +555,10 @@ C -> A (0.5, +)
 A -> D (0.3, +)
 D -> B (0.4, -)
 
-A: 50
-B: 30
-C: 40
-D: 20`;
+A: 50 (10)
+B: 30 (5)
+C: 40 (3)
+D: 20 (7)`;
     
     document.getElementById('graph-input').value = exampleGraph;
     app.buildGraphFromText();

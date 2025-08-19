@@ -282,6 +282,7 @@ input[type="range"] {
     background: #f8fafc;
     border-radius: 5px;
     border: 1px solid #e2e8f0;
+    gap: 8px;
 }
 
 .node-control label {
@@ -290,16 +291,61 @@ input[type="range"] {
     color: #4a5568;
 }
 
-.node-control input {
+.node-control input[type="range"] {
     flex: 1;
-    margin: 0 10px;
 }
 
 .node-control .node-value-display {
-    flex: 0 0 50px;
+    flex: 0 0 30px;
     text-align: right;
     font-weight: bold;
     color: #667eea;
+}
+
+.perturb-label {
+    flex: 0 0 15px !important;
+    font-size: 12px;
+    color: #718096;
+    margin-left: 5px;
+}
+
+.perturb-spinner {
+    flex: 0 0 60px !important;
+    width: 60px;
+    padding: 2px 4px;
+    border: 1px solid #cbd5e0;
+    border-radius: 3px;
+    font-size: 11px;
+    text-align: center;
+}
+
+.perturb-spinner:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* Control arrows for manual perturbation */
+.control-arrow {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.control-arrow:hover {
+    opacity: 1;
+}
+
+.increase-arrow {
+    fill: #48bb78;
+}
+
+.decrease-arrow {
+    fill: #f56565;
+}
+
+.control-arrow:active {
+    opacity: 0.8;
 }
 
 /* Instructions */
@@ -335,3 +381,4 @@ input[type="range"] {
         height: 400px;
     }
 }
+

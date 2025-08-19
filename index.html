@@ -35,11 +35,11 @@ B -> C (0.6, -)
 C -> A (0.5, +)
 A -> D (0.3, +)
 
-Node values:
-A: 50
-B: 30
-C: 40
-D: 20"></textarea>
+Node values (with optional perturbation amounts):
+A: 50 (10)
+B: 30 (5)
+C: 40 (3)
+D: 20 (7)"></textarea>
                     <button id="build-graph">Build Graph</button>
                 </div>
 
@@ -85,14 +85,24 @@ D: 20"></textarea>
                     <li><strong>Connections:</strong> NodeA -> NodeB (multiplier, polarity)</li>
                     <li><strong>Multiplier:</strong> 0.1 to 1.0 (strength of influence)</li>
                     <li><strong>Polarity:</strong> + (positive) or - (negative)</li>
-                    <li><strong>Node Values:</strong> NodeName: initial_value</li>
+                    <li><strong>Node Values:</strong> NodeName: initial_value (perturbation_amount)</li>
+                    <li><strong>Perturbation Amount:</strong> Optional, defaults to 5 if not specified</li>
                 </ul>
                 <h4>Features:</h4>
                 <ul>
                     <li>Real-time value propagation animation</li>
                     <li>Adjustable simulation speed and damping</li>
                     <li>Interactive node value adjustment</li>
+                    <li>Manual perturbation with arrow controls on nodes</li>
                     <li>Visual feedback for positive/negative connections</li>
+                </ul>
+                <h4>Manual Perturbation:</h4>
+                <ul>
+                    <li><strong>Green up arrow:</strong> Click to increase node value by its perturbation amount</li>
+                    <li><strong>Red down arrow:</strong> Click to decrease node value by its perturbation amount</li>
+                    <li>Arrows appear above and below each node</li>
+                    <li>Each node can have its own custom perturbation amount</li>
+                    <li>Use these to manually disturb the system and observe effects</li>
                 </ul>
             </div>
         </div>
