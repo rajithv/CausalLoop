@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CausalLoop - Dynamic Causal Loop Diagramming Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CausalLoop</h1>
+            <p>Dynamic Causal Loop Diagramming Tool</p>
+        </header>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="input-section">
+                    <h3>Graph Definition</h3>
+                    <div class="example-selector">
+                        <label for="example-select">Load Example:</label>
+                        <select id="example-select">
+                            <option value="">Select an example...</option>
+                            <option value="simple">Simple Loop</option>
+                            <option value="population">Population Growth</option>
+                            <option value="economic">Economic Feedback</option>
+                            <option value="climate">Climate Change</option>
+                            <option value="organization">Organizational Learning</option>
+                        </select>
+                    </div>
+                    <textarea id="graph-input" placeholder="Enter your causal loop graph definition:
+Example:
+A -> B (0.8, +)
+B -> C (0.6, -)
+C -> A (0.5, +)
+A -> D (0.3, +)
+
+Node values:
+A: 50
+B: 30
+C: 40
+D: 20"></textarea>
+                    <button id="build-graph">Build Graph</button>
+                </div>
+
+                <div class="simulation-controls">
+                    <h3>Simulation Controls</h3>
+                    <div class="control-group">
+                        <button id="start-simulation">Start Animation</button>
+                        <button id="stop-simulation">Stop Animation</button>
+                        <button id="reset-simulation">Reset Values</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="speed-slider">Animation Speed:</label>
+                        <input type="range" id="speed-slider" min="100" max="2000" value="500">
+                        <span id="speed-value">500ms</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="damping-slider">Damping Factor:</label>
+                        <input type="range" id="damping-slider" min="0.1" max="1.0" step="0.1" value="0.9">
+                        <span id="damping-value">0.9</span>
+                    </div>
+                </div>
+
+                <div class="node-controls">
+                    <h3>Node Controls</h3>
+                    <div id="node-controls-container">
+                        <!-- Node controls will be dynamically generated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+                <svg id="causal-diagram" width="800" height="600">
+                    <!-- SVG elements will be dynamically created here -->
+                </svg>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Instructions</h3>
+            <div class="instructions">
+                <h4>Graph Definition Format:</h4>
+                <ul>
+                    <li><strong>Connections:</strong> NodeA -> NodeB (multiplier, polarity)</li>
+                    <li><strong>Multiplier:</strong> 0.1 to 1.0 (strength of influence)</li>
+                    <li><strong>Polarity:</strong> + (positive) or - (negative)</li>
+                    <li><strong>Node Values:</strong> NodeName: initial_value</li>
+                </ul>
+                <h4>Features:</h4>
+                <ul>
+                    <li>Real-time value propagation animation</li>
+                    <li>Adjustable simulation speed and damping</li>
+                    <li>Interactive node value adjustment</li>
+                    <li>Visual feedback for positive/negative connections</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="examples.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

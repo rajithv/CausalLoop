@@ -1,0 +1,21 @@
+{
+  "name": "causalloop",
+  "version": "1.0.0",
+  "description": "A dynamic causal loop diagramming tool for visualizing complex system relationships",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "causal-loop",
+    "systems-thinking",
+    "visualization",
+    "dynamic-modeling",
+    "graph-theory"
+  ],
+  "author": "CausalLoop Team",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}
