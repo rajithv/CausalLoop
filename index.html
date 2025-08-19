@@ -15,34 +15,6 @@
 
         <div class="main-content">
             <div class="control-panel">
-                <div class="input-section">
-                    <h3>Graph Definition</h3>
-                    <div class="example-selector">
-                        <label for="example-select">Load Example:</label>
-                        <select id="example-select">
-                            <option value="">Select an example...</option>
-                            <option value="simple">Simple Loop</option>
-                            <option value="population">Population Growth</option>
-                            <option value="economic">Economic Feedback</option>
-                            <option value="climate">Climate Change</option>
-                            <option value="organization">Organizational Learning</option>
-                        </select>
-                    </div>
-                    <textarea id="graph-input" placeholder="Enter your causal loop graph definition:
-Example:
-A -> B (0.8, +)
-B -> C (0.6, -)
-C -> A (0.5, +)
-A -> D (0.3, +)
-
-Node values (with optional perturbation amounts):
-A: 50 (10)
-B: 30 (5)
-C: 40 (3)
-D: 20 (7)"></textarea>
-                    <button id="build-graph">Build Graph</button>
-                </div>
-
                 <div class="simulation-controls">
                     <h3>Simulation Controls</h3>
                     <div class="control-group">
@@ -77,33 +49,114 @@ D: 20 (7)"></textarea>
             </div>
         </div>
 
-        <div class="info-panel">
-            <h3>Instructions</h3>
-            <div class="instructions">
-                <h4>Graph Definition Format:</h4>
-                <ul>
-                    <li><strong>Connections:</strong> NodeA -> NodeB (multiplier, polarity)</li>
-                    <li><strong>Multiplier:</strong> 0.1 to 1.0 (strength of influence)</li>
-                    <li><strong>Polarity:</strong> + (positive) or - (negative)</li>
-                    <li><strong>Node Values:</strong> NodeName: initial_value (perturbation_amount)</li>
-                    <li><strong>Perturbation Amount:</strong> Optional, defaults to 5 if not specified</li>
-                </ul>
-                <h4>Features:</h4>
-                <ul>
-                    <li>Real-time value propagation animation</li>
-                    <li>Adjustable simulation speed and damping</li>
-                    <li>Interactive node value adjustment</li>
-                    <li>Manual perturbation with arrow controls on nodes</li>
-                    <li>Visual feedback for positive/negative connections</li>
-                </ul>
-                <h4>Manual Perturbation:</h4>
-                <ul>
-                    <li><strong>Green up arrow:</strong> Click to increase node value by its perturbation amount</li>
-                    <li><strong>Red down arrow:</strong> Click to decrease node value by its perturbation amount</li>
-                    <li>Arrows appear above and below each node</li>
-                    <li>Each node can have its own custom perturbation amount</li>
-                    <li>Use these to manually disturb the system and observe effects</li>
-                </ul>
+        <div class="graph-builder-section">
+            <div class="graph-builder-header" id="graph-builder-toggle">
+                <h3>
+                    <span class="toggle-icon">▶</span>
+                    Graph Builder
+                </h3>
+                <p class="builder-description">Define your causal loop graph structure and initial values</p>
+            </div>
+            
+            <div class="graph-builder-content" id="graph-builder-content">
+                <div class="graph-builder-scrollable">
+                    <div class="builder-tabs">
+                        <button class="tab-button active" data-tab="visual">Visual Builder</button>
+                        <button class="tab-button" data-tab="text">Text Definition</button>
+                    </div>
+
+                    <div class="tab-content active" id="visual-builder">
+                        <div class="builder-section">
+                            <h4>Nodes</h4>
+                            <div class="node-management">
+                                <button id="add-node-btn" class="action-button">+ Add Node</button>
+                                <div class="node-list" id="node-list">
+                                    <!-- Node items will be added here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="builder-section">
+                            <h4>Connections (Adjacency Matrix)</h4>
+                            <div class="matrix-container" id="matrix-container">
+                                <!-- Adjacency matrix will be generated here -->
+                            </div>
+                        </div>
+
+                        <div class="builder-actions">
+                            <button id="build-graph-visual" class="build-button">Build Graph from Visual</button>
+                            <button id="clear-graph" class="action-button secondary">Clear All</button>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="text-builder">
+                        <div class="input-section">
+                            <div class="example-selector">
+                                <label for="example-select">Load Example:</label>
+                                <select id="example-select">
+                                    <option value="">Select an example...</option>
+                                    <option value="simple">Simple Loop</option>
+                                    <option value="population">Population Growth</option>
+                                    <option value="economic">Economic Feedback</option>
+                                    <option value="climate">Climate Change</option>
+                                    <option value="organization">Organizational Learning</option>
+                                </select>
+                            </div>
+                            <textarea id="graph-input" placeholder="Enter your causal loop graph definition:
+Example:
+A -> B (0.8, +)
+B -> C (0.6, -)
+C -> A (0.5, +)
+A -> D (0.3, +)
+
+Node values (with optional perturbation amounts):
+A: 50 (10)
+B: 30 (5)
+C: 40 (3)
+D: 20 (7)"></textarea>
+                            <button id="build-graph">Build Graph from Text</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions-section">
+            <div class="instructions-header" id="instructions-toggle">
+                <h3>
+                    <span class="toggle-icon">▶</span>
+                    Instructions & Help
+                </h3>
+                <p class="instructions-description">Learn how to use CausalLoop and understand the features</p>
+            </div>
+            
+            <div class="instructions-content" id="instructions-content">
+                <div class="instructions">
+                    <h4>Graph Definition Format:</h4>
+                    <ul>
+                        <li><strong>Connections:</strong> NodeA -> NodeB (multiplier, polarity)</li>
+                        <li><strong>Multiplier:</strong> 0.1 to 1.0 (strength of influence)</li>
+                        <li><strong>Polarity:</strong> + (positive) or - (negative)</li>
+                        <li><strong>Node Values:</strong> NodeName: initial_value (perturbation_amount)</li>
+                        <li><strong>Perturbation Amount:</strong> Optional, defaults to 5 if not specified</li>
+                    </ul>
+                    <h4>Features:</h4>
+                    <ul>
+                        <li>Real-time value propagation animation</li>
+                        <li>Adjustable simulation speed and damping</li>
+                        <li>Interactive node value adjustment</li>
+                        <li>Manual perturbation with arrow controls on nodes</li>
+                        <li>Visual feedback for positive/negative connections</li>
+                    </ul>
+                    <h4>Manual Perturbation:</h4>
+                    <ul>
+                        <li><strong>Green up arrow:</strong> Click to increase node value by its perturbation amount</li>
+                        <li><strong>Red down arrow:</strong> Click to decrease node value by its perturbation amount</li>
+                        <li>Arrows appear above and below each node</li>
+                        <li>Each node can have its own custom perturbation amount</li>
+                        <li>Use these to manually disturb the system and observe effects</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>

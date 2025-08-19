@@ -11,6 +11,11 @@ class CausalLoopDiagram {
         this.isRunning = false;
         this.originalValues = new Map();
         
+        // Visual builder properties
+        this.visualNodes = [];
+        this.nextNodeId = 1;
+        this.syncInProgress = false;
+        
         this.initializeEventListeners();
         this.setupSVGDefinitions();
     }
@@ -20,6 +25,28 @@ class CausalLoopDiagram {
         document.getElementById('start-simulation').addEventListener('click', () => this.startSimulation());
         document.getElementById('stop-simulation').addEventListener('click', () => this.stopSimulation());
         document.getElementById('reset-simulation').addEventListener('click', () => this.resetSimulation());
+        
+        // Graph builder toggle
+        document.getElementById('graph-builder-toggle').addEventListener('click', () => this.toggleGraphBuilder());
+        
+        // Instructions toggle
+        document.getElementById('instructions-toggle').addEventListener('click', () => this.toggleInstructions());
+        
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => this.switchTab(button.dataset.tab));
+        });
+        
+        // Visual builder events
+        document.getElementById('add-node-btn').addEventListener('click', () => this.addNode());
+        document.getElementById('build-graph-visual').addEventListener('click', () => this.buildGraphFromVisual());
+        document.getElementById('clear-graph').addEventListener('click', () => this.clearVisualBuilder());
+        
+        // Text definition sync
+        document.getElementById('graph-input').addEventListener('input', () => this.syncFromText());
+        document.getElementById('graph-input').addEventListener('paste', () => {
+            setTimeout(() => this.syncFromText(), 10); // Delay to allow paste to complete
+        });
         
         // Example selector
         document.getElementById('example-select').addEventListener('change', (e) => {
@@ -37,6 +64,448 @@ class CausalLoopDiagram {
             this.dampingFactor = parseFloat(e.target.value);
             document.getElementById('damping-value').textContent = this.dampingFactor;
         });
+    }
+    
+    toggleGraphBuilder() {
+        const content = document.getElementById('graph-builder-content');
+        const icon = document.querySelector('.toggle-icon');
+        
+        if (content.classList.contains('expanded')) {
+            content.classList.remove('expanded');
+            icon.classList.remove('expanded');
+        } else {
+            content.classList.add('expanded');
+            icon.classList.add('expanded');
+        }
+    }
+    
+    toggleInstructions() {
+        const content = document.getElementById('instructions-content');
+        const icon = document.querySelector('#instructions-toggle .toggle-icon');
+        
+        if (content.classList.contains('expanded')) {
+            content.classList.remove('expanded');
+            icon.classList.remove('expanded');
+        } else {
+            content.classList.add('expanded');
+            icon.classList.add('expanded');
+        }
+    }
+    
+    switchTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(tabName === 'visual' ? 'visual-builder' : 'text-builder').classList.add('active');
+    }
+    
+    addNode() {
+        const nodeId = this.nextNodeId++;
+        const nodeData = {
+            id: nodeId,
+            label: `Node ${nodeId}`,
+            value: 50,
+            perturbationAmount: 5
+        };
+        
+        this.visualNodes.push(nodeData);
+        this.renderNodeList();
+        this.renderAdjacencyMatrix();
+        this.syncToText();
+    }
+    
+    removeNode(nodeId) {
+        this.visualNodes = this.visualNodes.filter(node => node.id !== nodeId);
+        this.renderNodeList();
+        this.renderAdjacencyMatrix();
+        this.syncToText();
+    }
+    
+    renderNodeList() {
+        const container = document.getElementById('node-list');
+        container.innerHTML = '';
+        
+        this.visualNodes.forEach(node => {
+            const nodeItem = document.createElement('div');
+            nodeItem.classList.add('node-item');
+            
+            nodeItem.innerHTML = `
+                <div class="node-number">${node.id}</div>
+                <input type="text" class="node-input" value="${node.label}" 
+                       placeholder="Node label" onchange="app.updateNodeLabel(${node.id}, this.value)">
+                <input type="number" class="value-input" value="${node.value}" min="0" max="100"
+                       title="Initial Value" onchange="app.updateNodeValue(${node.id}, this.value)">
+                <input type="number" class="perturb-input" value="${node.perturbationAmount}" min="0.1" max="50" step="0.1"
+                       title="Perturbation Amount" onchange="app.updateNodePerturbation(${node.id}, this.value)">
+                <button class="remove-node-btn" onclick="app.removeNode(${node.id})">×</button>
+            `;
+            
+            container.appendChild(nodeItem);
+        });
+    }
+    
+    renderAdjacencyMatrix() {
+        const container = document.getElementById('matrix-container');
+        
+        if (this.visualNodes.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #718096;">Add nodes to see the adjacency matrix</p>';
+            return;
+        }
+        
+        let tableHTML = `
+            <table class="adjacency-matrix">
+                <thead>
+                    <tr>
+                        <th>From \\ To</th>
+                        ${this.visualNodes.map(node => `<th>${node.label}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        this.visualNodes.forEach(fromNode => {
+            tableHTML += `<tr><td class="row-header">${fromNode.label}</td>`;
+            
+            this.visualNodes.forEach(toNode => {
+                if (fromNode.id === toNode.id) {
+                    tableHTML += '<td class="matrix-cell">—</td>';
+                } else {
+                    tableHTML += `
+                        <td class="matrix-cell">
+                            <input type="number" class="matrix-input" min="0" max="1" step="0.1" 
+                                   placeholder="0" data-from="${fromNode.id}" data-to="${toNode.id}"
+                                   onchange="app.syncToText()">
+                            <select class="matrix-select" data-from="${fromNode.id}" data-to="${toNode.id}"
+                                    onchange="app.syncToText()">
+                                <option value="">—</option>
+                                <option value="+">+</option>
+                                <option value="-">−</option>
+                            </select>
+                        </td>
+                    `;
+                }
+            });
+            
+            tableHTML += '</tr>';
+        });
+        
+        tableHTML += '</tbody></table>';
+        container.innerHTML = tableHTML;
+    }
+    
+    updateNodeLabel(nodeId, label) {
+        const node = this.visualNodes.find(n => n.id === nodeId);
+        if (node && node.label !== label) {
+            const oldLabel = node.label;
+            
+            // Capture current matrix state before changing the label
+            const currentMatrix = this.getCurrentMatrixState();
+            
+            node.label = label;
+            this.renderAdjacencyMatrix(); // Update matrix headers
+            
+            // Restore matrix values after the matrix is regenerated
+            setTimeout(() => {
+                this.restoreMatrixState(currentMatrix, this.visualNodes);
+                this.updateTextLabels(oldLabel, label);
+            }, 10);
+        }
+    }
+    
+    updateTextLabels(oldLabel, newLabel) {
+        if (this.syncInProgress) return;
+        this.syncInProgress = true;
+        
+        const textArea = document.getElementById('graph-input');
+        let text = textArea.value;
+        
+        // Replace node labels in connections
+        const connectionRegex = new RegExp(`\\b${oldLabel}\\b(?=\\s*->|(?:\\s*<-))`, 'g');
+        const targetRegex = new RegExp(`(?<=->\\s*)\\b${oldLabel}\\b`, 'g');
+        const valueRegex = new RegExp(`^${oldLabel}:`, 'gm');
+        
+        text = text.replace(connectionRegex, newLabel);
+        text = text.replace(targetRegex, newLabel);
+        text = text.replace(valueRegex, `${newLabel}:`);
+        
+        textArea.value = text;
+        textArea.classList.remove('validation-error');
+        
+        this.syncInProgress = false;
+    }
+    
+    updateNodeValue(nodeId, value) {
+        const node = this.visualNodes.find(n => n.id === nodeId);
+        if (node) {
+            node.value = parseFloat(value);
+            this.syncToText();
+        }
+    }
+    
+    updateNodePerturbation(nodeId, amount) {
+        const node = this.visualNodes.find(n => n.id === nodeId);
+        if (node) {
+            node.perturbationAmount = parseFloat(amount);
+            this.syncToText();
+        }
+    }
+    
+    buildGraphFromVisual() {
+        if (this.visualNodes.length === 0) {
+            alert('Please add some nodes first.');
+            return;
+        }
+        
+        // Create connections and nodeValues maps from visual data
+        const connections = [];
+        const nodeValues = new Map();
+        const perturbationAmounts = new Map();
+        
+        // Add nodes
+        this.visualNodes.forEach(node => {
+            nodeValues.set(node.label, node.value);
+            perturbationAmounts.set(node.label, node.perturbationAmount);
+        });
+        
+        // Extract connections from adjacency matrix
+        const matrixInputs = document.querySelectorAll('.matrix-input');
+        const matrixSelects = document.querySelectorAll('.matrix-select');
+        
+        matrixInputs.forEach((input, index) => {
+            const select = matrixSelects[index];
+            const multiplier = parseFloat(input.value);
+            const polarity = select.value;
+            
+            if (multiplier && polarity) {
+                const fromId = parseInt(input.dataset.from);
+                const toId = parseInt(input.dataset.to);
+                const fromNode = this.visualNodes.find(n => n.id === fromId);
+                const toNode = this.visualNodes.find(n => n.id === toId);
+                
+                if (fromNode && toNode) {
+                    connections.push({
+                        source: fromNode.label,
+                        target: toNode.label,
+                        multiplier: multiplier,
+                        polarity: polarity
+                    });
+                }
+            }
+        });
+        
+        // Build the graph
+        this.buildGraph(connections, nodeValues, perturbationAmounts);
+        
+        // Collapse the builder
+        this.toggleGraphBuilder();
+    }
+    
+    clearVisualBuilder() {
+        if (confirm('Are you sure you want to clear all nodes and connections?')) {
+            this.visualNodes = [];
+            this.nextNodeId = 1;
+            this.renderNodeList();
+            this.renderAdjacencyMatrix();
+            this.syncToText();
+        }
+    }
+    
+    syncFromText() {
+        if (this.syncInProgress) return;
+        this.syncInProgress = true;
+        
+        const textArea = document.getElementById('graph-input');
+        const text = textArea.value;
+        
+        try {
+            const { connections, nodeValues, perturbationAmounts } = this.parseGraphText(text);
+            
+            // Clear validation error
+            textArea.classList.remove('validation-error');
+            
+            // Extract unique node names and create visual nodes
+            const nodeNames = new Set();
+            connections.forEach(conn => {
+                nodeNames.add(conn.source);
+                nodeNames.add(conn.target);
+            });
+            nodeValues.forEach((value, name) => nodeNames.add(name));
+            
+            // Store current matrix state before updating nodes
+            const currentMatrix = this.getCurrentMatrixState();
+            
+            // Update visual nodes (preserve existing IDs where possible)
+            const oldNodes = [...this.visualNodes];
+            this.visualNodes = [];
+            let nodeId = 1;
+            
+            nodeNames.forEach(name => {
+                // Try to find existing node with same label
+                const existingNode = oldNodes.find(n => n.label === name);
+                
+                if (existingNode) {
+                    // Keep existing node with same ID
+                    this.visualNodes.push({
+                        ...existingNode,
+                        label: name,
+                        value: nodeValues.get(name) || existingNode.value,
+                        perturbationAmount: perturbationAmounts.get(name) || existingNode.perturbationAmount
+                    });
+                } else {
+                    // Create new node
+                    this.visualNodes.push({
+                        id: nodeId,
+                        label: name,
+                        value: nodeValues.get(name) || 50,
+                        perturbationAmount: perturbationAmounts.get(name) || 5
+                    });
+                }
+                nodeId++;
+            });
+            
+            // Reassign IDs to maintain order
+            this.visualNodes.forEach((node, index) => {
+                node.id = index + 1;
+            });
+            this.nextNodeId = this.visualNodes.length + 1;
+            
+            // Update visual interface
+            this.renderNodeList();
+            this.renderAdjacencyMatrix();
+            
+            // Restore matrix state and apply new connections
+            setTimeout(() => {
+                this.restoreMatrixState(currentMatrix, oldNodes);
+                this.applyConnectionsToMatrix(connections);
+            }, 50);
+            
+        } catch (error) {
+            // Show validation error
+            textArea.classList.add('validation-error');
+            console.warn('Text parsing error:', error);
+        }
+        
+        this.syncInProgress = false;
+    }
+    
+    getCurrentMatrixState() {
+        const matrixState = new Map();
+        const matrixInputs = document.querySelectorAll('.matrix-input');
+        const matrixSelects = document.querySelectorAll('.matrix-select');
+        
+        matrixInputs.forEach((input, index) => {
+            const select = matrixSelects[index];
+            if (input.value && select.value) {
+                const fromId = parseInt(input.dataset.from);
+                const toId = parseInt(input.dataset.to);
+                const fromNode = this.visualNodes.find(n => n.id === fromId);
+                const toNode = this.visualNodes.find(n => n.id === toId);
+                
+                if (fromNode && toNode) {
+                    const key = `${fromId}->${toId}`;  // Use IDs instead of labels for capture
+                    matrixState.set(key, {
+                        multiplier: parseFloat(input.value),
+                        polarity: select.value,
+                        fromLabel: fromNode.label,
+                        toLabel: toNode.label
+                    });
+                }
+            }
+        });
+        
+        return matrixState;
+    }
+    
+    restoreMatrixState(matrixState, oldNodes) {
+        // Restore existing connections using the ID-based keys
+        matrixState.forEach((connection, key) => {
+            const [fromId, toId] = key.split('->').map(id => parseInt(id));
+            const fromNode = this.visualNodes.find(n => n.id === fromId);
+            const toNode = this.visualNodes.find(n => n.id === toId);
+            
+            if (fromNode && toNode) {
+                const multiplierInput = document.querySelector(
+                    `.matrix-input[data-from="${fromNode.id}"][data-to="${toNode.id}"]`
+                );
+                const polaritySelect = document.querySelector(
+                    `.matrix-select[data-from="${fromNode.id}"][data-to="${toNode.id}"]`
+                );
+                
+                if (multiplierInput) multiplierInput.value = connection.multiplier;
+                if (polaritySelect) polaritySelect.value = connection.polarity;
+            }
+        });
+    }
+    
+    applyConnectionsToMatrix(connections) {
+        // Apply connections from text definition (these override existing ones)
+        connections.forEach(conn => {
+            const fromNode = this.visualNodes.find(n => n.label === conn.source);
+            const toNode = this.visualNodes.find(n => n.label === conn.target);
+            
+            if (fromNode && toNode) {
+                const multiplierInput = document.querySelector(
+                    `.matrix-input[data-from="${fromNode.id}"][data-to="${toNode.id}"]`
+                );
+                const polaritySelect = document.querySelector(
+                    `.matrix-select[data-from="${fromNode.id}"][data-to="${toNode.id}"]`
+                );
+                
+                if (multiplierInput) multiplierInput.value = conn.multiplier;
+                if (polaritySelect) polaritySelect.value = conn.polarity;
+            }
+        });
+    }
+    
+    syncToText() {
+        if (this.syncInProgress) return;
+        this.syncInProgress = true;
+        
+        let textDefinition = '';
+        
+        // Generate connections from adjacency matrix
+        const connections = [];
+        const matrixInputs = document.querySelectorAll('.matrix-input');
+        const matrixSelects = document.querySelectorAll('.matrix-select');
+        
+        matrixInputs.forEach((input, index) => {
+            const select = matrixSelects[index];
+            const multiplier = parseFloat(input.value);
+            const polarity = select.value;
+            
+            if (multiplier && polarity) {
+                const fromId = parseInt(input.dataset.from);
+                const toId = parseInt(input.dataset.to);
+                const fromNode = this.visualNodes.find(n => n.id === fromId);
+                const toNode = this.visualNodes.find(n => n.id === toId);
+                
+                if (fromNode && toNode) {
+                    connections.push(`${fromNode.label} -> ${toNode.label} (${multiplier}, ${polarity})`);
+                }
+            }
+        });
+        
+        // Add connections to text
+        if (connections.length > 0) {
+            textDefinition += connections.join('\n') + '\n\n';
+        }
+        
+        // Add node values
+        if (this.visualNodes.length > 0) {
+            const nodeLines = this.visualNodes.map(node => 
+                `${node.label}: ${node.value} (${node.perturbationAmount})`
+            );
+            textDefinition += nodeLines.join('\n');
+        }
+        
+        // Update text area
+        document.getElementById('graph-input').value = textDefinition;
+        document.getElementById('graph-input').classList.remove('validation-error');
+        
+        this.syncInProgress = false;
     }
 
     loadExample(exampleType) {
@@ -114,6 +583,18 @@ Risk: 25`
 
         if (examples[exampleType]) {
             document.getElementById('graph-input').value = examples[exampleType];
+            
+            // Expand the graph builder to show the loaded example
+            const content = document.getElementById('graph-builder-content');
+            const icon = document.querySelector('.toggle-icon');
+            if (!content.classList.contains('expanded')) {
+                content.classList.add('expanded');
+                icon.classList.add('expanded');
+            }
+            
+            // Sync from text to visual
+            this.syncFromText();
+            
             this.buildGraphFromText();
         }
     }
@@ -545,8 +1026,10 @@ Risk: 25`
 }
 
 // Initialize the application when the DOM is loaded
+let app; // Global reference for visual builder callbacks
+
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new CausalLoopDiagram();
+    app = new CausalLoopDiagram();
     
     // Load example graph
     const exampleGraph = `A -> B (0.8, +)
@@ -561,5 +1044,14 @@ C: 40 (3)
 D: 20 (7)`;
     
     document.getElementById('graph-input').value = exampleGraph;
+    app.syncFromText(); // Sync the example to visual builder
     app.buildGraphFromText();
+    
+    // Initialize visual builder with sample nodes (remove this since we sync from text)
+    // app.addNode(); // Node 1
+    // app.addNode(); // Node 2  
+    // app.addNode(); // Node 3
+    // app.updateNodeLabel(1, 'Population');
+    // app.updateNodeLabel(2, 'Resources');
+    // app.updateNodeLabel(3, 'Growth Rate');
 });
