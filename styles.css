@@ -552,65 +552,91 @@ input[type="range"] {
     background: #feb2b2;
 }
 
-/* Adjacency matrix */
-.matrix-container {
-    overflow-x: auto;
+/* Adjacency list */
+.connections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.connections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.connection-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
     background: white;
-    border-radius: 6px;
-    padding: 15px;
-}
-
-.adjacency-matrix {
-    border-collapse: collapse;
-    width: 100%;
-    min-width: 400px;
-}
-
-.adjacency-matrix th,
-.adjacency-matrix td {
     border: 1px solid #e2e8f0;
-    padding: 8px;
-    text-align: center;
-    vertical-align: middle;
+    border-radius: 6px;
 }
 
-.adjacency-matrix th {
-    background: #f7fafc;
-    font-weight: 600;
-    color: #2d3748;
-}
-
-.adjacency-matrix .row-header {
-    background: #f7fafc;
-    font-weight: 600;
-    color: #2d3748;
-    text-align: left;
-}
-
-.matrix-cell {
-    width: 80px;
-}
-
-.matrix-input {
-    width: 60px;
-    padding: 4px;
+.connection-select {
+    flex: 1;
+    padding: 6px 10px;
     border: 1px solid #cbd5e0;
-    border-radius: 3px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.connection-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.connection-arrow {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4a5568;
+    flex: 0 0 auto;
+}
+
+.connection-multiplier {
+    flex: 0 0 80px;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 12px;
     text-align: center;
+}
+
+.connection-multiplier:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.connection-polarity {
+    flex: 0 0 50px;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
     font-size: 12px;
 }
 
-.matrix-input:focus {
+.connection-polarity:focus {
     outline: none;
     border-color: #667eea;
 }
 
-.matrix-select {
-    width: 50px;
-    padding: 2px;
-    border: 1px solid #cbd5e0;
-    border-radius: 3px;
+.remove-connection-btn {
+    flex: 0 0 auto;
+    background: #fed7d7;
+    color: #c53030;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
     font-size: 12px;
+}
+
+.remove-connection-btn:hover {
+    background: #feb2b2;
 }
 
 /* Action buttons */

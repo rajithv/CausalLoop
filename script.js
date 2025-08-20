@@ -13,7 +13,9 @@ class CausalLoopDiagram {
         
         // Visual builder properties
         this.visualNodes = [];
+        this.visualConnections = [];
         this.nextNodeId = 1;
+        this.nextConnectionId = 1;
         this.syncInProgress = false;
         
         this.initializeEventListeners();
@@ -39,6 +41,7 @@ class CausalLoopDiagram {
         
         // Visual builder events
         document.getElementById('add-node-btn').addEventListener('click', () => this.addNode());
+        document.getElementById('add-connection-btn').addEventListener('click', () => this.addConnection());
         document.getElementById('build-graph-visual').addEventListener('click', () => this.buildGraphFromVisual());
         document.getElementById('clear-graph').addEventListener('click', () => this.clearVisualBuilder());
         
@@ -113,14 +116,47 @@ class CausalLoopDiagram {
         
         this.visualNodes.push(nodeData);
         this.renderNodeList();
-        this.renderAdjacencyMatrix();
+        this.renderConnectionsList();
         this.syncToText();
     }
     
     removeNode(nodeId) {
+        // Remove the node
         this.visualNodes = this.visualNodes.filter(node => node.id !== nodeId);
+        
+        // Remove any connections involving this node
+        this.visualConnections = this.visualConnections.filter(
+            conn => conn.fromNodeId !== nodeId && conn.toNodeId !== nodeId
+        );
+        
         this.renderNodeList();
-        this.renderAdjacencyMatrix();
+        this.renderConnectionsList();
+        this.syncToText();
+    }
+    
+    addConnection() {
+        if (this.visualNodes.length < 2) {
+            alert('You need at least 2 nodes to create a connection.');
+            return;
+        }
+        
+        const connectionId = this.nextConnectionId++;
+        const connectionData = {
+            id: connectionId,
+            fromNodeId: this.visualNodes[0].id,
+            toNodeId: this.visualNodes.length > 1 ? this.visualNodes[1].id : this.visualNodes[0].id,
+            multiplier: 0.5,
+            polarity: '+'
+        };
+        
+        this.visualConnections.push(connectionData);
+        this.renderConnectionsList();
+        this.syncToText();
+    }
+    
+    removeConnection(connectionId) {
+        this.visualConnections = this.visualConnections.filter(conn => conn.id !== connectionId);
+        this.renderConnectionsList();
         this.syncToText();
     }
     
@@ -147,71 +183,88 @@ class CausalLoopDiagram {
         });
     }
     
-    renderAdjacencyMatrix() {
-        const container = document.getElementById('matrix-container');
+    renderConnectionsList() {
+        const container = document.getElementById('connections-list');
+        container.innerHTML = '';
         
         if (this.visualNodes.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #718096;">Add nodes to see the adjacency matrix</p>';
+            container.innerHTML = '<p style="text-align: center; color: #718096;">Add nodes to create connections</p>';
             return;
         }
         
-        let tableHTML = `
-            <table class="adjacency-matrix">
-                <thead>
-                    <tr>
-                        <th>From \\ To</th>
-                        ${this.visualNodes.map(node => `<th>${node.label}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-        
-        this.visualNodes.forEach(fromNode => {
-            tableHTML += `<tr><td class="row-header">${fromNode.label}</td>`;
+        this.visualConnections.forEach(connection => {
+            const connectionItem = document.createElement('div');
+            connectionItem.classList.add('connection-item');
             
-            this.visualNodes.forEach(toNode => {
-                if (fromNode.id === toNode.id) {
-                    tableHTML += '<td class="matrix-cell">—</td>';
-                } else {
-                    tableHTML += `
-                        <td class="matrix-cell">
-                            <input type="number" class="matrix-input" min="0" max="1" step="0.1" 
-                                   placeholder="0" data-from="${fromNode.id}" data-to="${toNode.id}"
-                                   onchange="app.syncToText()">
-                            <select class="matrix-select" data-from="${fromNode.id}" data-to="${toNode.id}"
-                                    onchange="app.syncToText()">
-                                <option value="">—</option>
-                                <option value="+">+</option>
-                                <option value="-">−</option>
-                            </select>
-                        </td>
-                    `;
-                }
-            });
+            const nodeOptions = this.visualNodes.map(node => 
+                `<option value="${node.id}" ${node.id === connection.fromNodeId ? 'selected' : ''}>${node.label}</option>`
+            ).join('');
             
-            tableHTML += '</tr>';
+            const nodeOptionsTo = this.visualNodes.map(node => 
+                `<option value="${node.id}" ${node.id === connection.toNodeId ? 'selected' : ''}>${node.label}</option>`
+            ).join('');
+            
+            connectionItem.innerHTML = `
+                <select class="connection-select" onchange="app.updateConnectionFrom(${connection.id}, this.value)">
+                    ${nodeOptions}
+                </select>
+                <span class="connection-arrow">→</span>
+                <select class="connection-select" onchange="app.updateConnectionTo(${connection.id}, this.value)">
+                    ${nodeOptionsTo}
+                </select>
+                <input type="number" class="connection-multiplier" value="${connection.multiplier}" 
+                       min="0" max="1" step="0.1" placeholder="0.5"
+                       title="Multiplier" onchange="app.updateConnectionMultiplier(${connection.id}, this.value)">
+                <select class="connection-polarity" onchange="app.updateConnectionPolarity(${connection.id}, this.value)">
+                    <option value="+" ${connection.polarity === '+' ? 'selected' : ''}>+</option>
+                    <option value="-" ${connection.polarity === '-' ? 'selected' : ''}>−</option>
+                </select>
+                <button class="remove-connection-btn" onclick="app.removeConnection(${connection.id})">×</button>
+            `;
+            
+            container.appendChild(connectionItem);
         });
-        
-        tableHTML += '</tbody></table>';
-        container.innerHTML = tableHTML;
     }
     
     updateNodeLabel(nodeId, label) {
         const node = this.visualNodes.find(n => n.id === nodeId);
         if (node && node.label !== label) {
             const oldLabel = node.label;
-            
-            // Capture current matrix state before changing the label
-            const currentMatrix = this.getCurrentMatrixState();
-            
             node.label = label;
-            this.renderAdjacencyMatrix(); // Update matrix headers
-            
-            // Restore matrix values after the matrix is regenerated
-            setTimeout(() => {
-                this.restoreMatrixState(currentMatrix, this.visualNodes);
-                this.updateTextLabels(oldLabel, label);
-            }, 10);
+            this.renderConnectionsList(); // Update connection dropdowns
+            this.updateTextLabels(oldLabel, label);
+        }
+    }
+    
+    updateConnectionFrom(connectionId, fromNodeId) {
+        const connection = this.visualConnections.find(c => c.id === connectionId);
+        if (connection) {
+            connection.fromNodeId = parseInt(fromNodeId);
+            this.syncToText();
+        }
+    }
+    
+    updateConnectionTo(connectionId, toNodeId) {
+        const connection = this.visualConnections.find(c => c.id === connectionId);
+        if (connection) {
+            connection.toNodeId = parseInt(toNodeId);
+            this.syncToText();
+        }
+    }
+    
+    updateConnectionMultiplier(connectionId, multiplier) {
+        const connection = this.visualConnections.find(c => c.id === connectionId);
+        if (connection) {
+            connection.multiplier = parseFloat(multiplier);
+            this.syncToText();
+        }
+    }
+    
+    updateConnectionPolarity(connectionId, polarity) {
+        const connection = this.visualConnections.find(c => c.id === connectionId);
+        if (connection) {
+            connection.polarity = polarity;
+            this.syncToText();
         }
     }
     
@@ -270,29 +323,18 @@ class CausalLoopDiagram {
             perturbationAmounts.set(node.label, node.perturbationAmount);
         });
         
-        // Extract connections from adjacency matrix
-        const matrixInputs = document.querySelectorAll('.matrix-input');
-        const matrixSelects = document.querySelectorAll('.matrix-select');
-        
-        matrixInputs.forEach((input, index) => {
-            const select = matrixSelects[index];
-            const multiplier = parseFloat(input.value);
-            const polarity = select.value;
+        // Add connections from adjacency list
+        this.visualConnections.forEach(conn => {
+            const fromNode = this.visualNodes.find(n => n.id === conn.fromNodeId);
+            const toNode = this.visualNodes.find(n => n.id === conn.toNodeId);
             
-            if (multiplier && polarity) {
-                const fromId = parseInt(input.dataset.from);
-                const toId = parseInt(input.dataset.to);
-                const fromNode = this.visualNodes.find(n => n.id === fromId);
-                const toNode = this.visualNodes.find(n => n.id === toId);
-                
-                if (fromNode && toNode) {
-                    connections.push({
-                        source: fromNode.label,
-                        target: toNode.label,
-                        multiplier: multiplier,
-                        polarity: polarity
-                    });
-                }
+            if (fromNode && toNode) {
+                connections.push({
+                    source: fromNode.label,
+                    target: toNode.label,
+                    multiplier: conn.multiplier,
+                    polarity: conn.polarity
+                });
             }
         });
         
@@ -306,9 +348,11 @@ class CausalLoopDiagram {
     clearVisualBuilder() {
         if (confirm('Are you sure you want to clear all nodes and connections?')) {
             this.visualNodes = [];
+            this.visualConnections = [];
             this.nextNodeId = 1;
+            this.nextConnectionId = 1;
             this.renderNodeList();
-            this.renderAdjacencyMatrix();
+            this.renderConnectionsList();
             this.syncToText();
         }
     }
@@ -333,9 +377,6 @@ class CausalLoopDiagram {
                 nodeNames.add(conn.target);
             });
             nodeValues.forEach((value, name) => nodeNames.add(name));
-            
-            // Store current matrix state before updating nodes
-            const currentMatrix = this.getCurrentMatrixState();
             
             // Update visual nodes (preserve existing IDs where possible)
             const oldNodes = [...this.visualNodes];
@@ -372,15 +413,30 @@ class CausalLoopDiagram {
             });
             this.nextNodeId = this.visualNodes.length + 1;
             
+            // Update visual connections
+            this.visualConnections = [];
+            let connectionId = 1;
+            
+            connections.forEach(conn => {
+                const fromNode = this.visualNodes.find(n => n.label === conn.source);
+                const toNode = this.visualNodes.find(n => n.label === conn.target);
+                
+                if (fromNode && toNode) {
+                    this.visualConnections.push({
+                        id: connectionId++,
+                        fromNodeId: fromNode.id,
+                        toNodeId: toNode.id,
+                        multiplier: conn.multiplier,
+                        polarity: conn.polarity
+                    });
+                }
+            });
+            
+            this.nextConnectionId = connectionId;
+            
             // Update visual interface
             this.renderNodeList();
-            this.renderAdjacencyMatrix();
-            
-            // Restore matrix state and apply new connections
-            setTimeout(() => {
-                this.restoreMatrixState(currentMatrix, oldNodes);
-                this.applyConnectionsToMatrix(connections);
-            }, 50);
+            this.renderConnectionsList();
             
         } catch (error) {
             // Show validation error
@@ -391,32 +447,63 @@ class CausalLoopDiagram {
         this.syncInProgress = false;
     }
     
-    getCurrentMatrixState() {
-        const matrixState = new Map();
-        const matrixInputs = document.querySelectorAll('.matrix-input');
-        const matrixSelects = document.querySelectorAll('.matrix-select');
+    syncToText() {
+        if (this.syncInProgress) return;
+        this.syncInProgress = true;
         
-        matrixInputs.forEach((input, index) => {
-            const select = matrixSelects[index];
-            if (input.value && select.value) {
-                const fromId = parseInt(input.dataset.from);
-                const toId = parseInt(input.dataset.to);
-                const fromNode = this.visualNodes.find(n => n.id === fromId);
-                const toNode = this.visualNodes.find(n => n.id === toId);
-                
-                if (fromNode && toNode) {
-                    const key = `${fromId}->${toId}`;  // Use IDs instead of labels for capture
-                    matrixState.set(key, {
-                        multiplier: parseFloat(input.value),
-                        polarity: select.value,
-                        fromLabel: fromNode.label,
-                        toLabel: toNode.label
-                    });
-                }
+        let textDefinition = '';
+        
+        // Generate connections from adjacency list
+        const connections = this.visualConnections.map(conn => {
+            const fromNode = this.visualNodes.find(n => n.id === conn.fromNodeId);
+            const toNode = this.visualNodes.find(n => n.id === conn.toNodeId);
+            
+            if (fromNode && toNode) {
+                return `${fromNode.label} -> ${toNode.label} (${conn.multiplier}, ${conn.polarity})`;
             }
-        });
+            return null;
+        }).filter(conn => conn !== null);
         
-        return matrixState;
+        // Add connections to text
+        if (connections.length > 0) {
+            textDefinition += connections.join('\n') + '\n\n';
+        }
+        
+        // Add node values
+        if (this.visualNodes.length > 0) {
+            const nodeLines = this.visualNodes.map(node => 
+                `${node.label}: ${node.value} (${node.perturbationAmount})`
+            );
+            textDefinition += nodeLines.join('\n');
+        }
+        
+        // Update text area
+        document.getElementById('graph-input').value = textDefinition;
+        document.getElementById('graph-input').classList.remove('validation-error');
+        
+        this.syncInProgress = false;
+    }
+    
+    updateTextLabels(oldLabel, newLabel) {
+        if (this.syncInProgress) return;
+        this.syncInProgress = true;
+        
+        const textArea = document.getElementById('graph-input');
+        let text = textArea.value;
+        
+        // Replace node labels in connections
+        const connectionRegex = new RegExp(`\b${oldLabel}\b(?=\s*->|(?:\s*<-))`, 'g');
+        const targetRegex = new RegExp(`(?<=->\s*)\b${oldLabel}\b`, 'g');
+        const valueRegex = new RegExp(`^${oldLabel}:`, 'gm');
+        
+        text = text.replace(connectionRegex, newLabel);
+        text = text.replace(targetRegex, newLabel);
+        text = text.replace(valueRegex, `${newLabel}:`);
+        
+        textArea.value = text;
+        textArea.classList.remove('validation-error');
+        
+        this.syncInProgress = false;
     }
     
     restoreMatrixState(matrixState, oldNodes) {
@@ -458,54 +545,6 @@ class CausalLoopDiagram {
                 if (polaritySelect) polaritySelect.value = conn.polarity;
             }
         });
-    }
-    
-    syncToText() {
-        if (this.syncInProgress) return;
-        this.syncInProgress = true;
-        
-        let textDefinition = '';
-        
-        // Generate connections from adjacency matrix
-        const connections = [];
-        const matrixInputs = document.querySelectorAll('.matrix-input');
-        const matrixSelects = document.querySelectorAll('.matrix-select');
-        
-        matrixInputs.forEach((input, index) => {
-            const select = matrixSelects[index];
-            const multiplier = parseFloat(input.value);
-            const polarity = select.value;
-            
-            if (multiplier && polarity) {
-                const fromId = parseInt(input.dataset.from);
-                const toId = parseInt(input.dataset.to);
-                const fromNode = this.visualNodes.find(n => n.id === fromId);
-                const toNode = this.visualNodes.find(n => n.id === toId);
-                
-                if (fromNode && toNode) {
-                    connections.push(`${fromNode.label} -> ${toNode.label} (${multiplier}, ${polarity})`);
-                }
-            }
-        });
-        
-        // Add connections to text
-        if (connections.length > 0) {
-            textDefinition += connections.join('\n') + '\n\n';
-        }
-        
-        // Add node values
-        if (this.visualNodes.length > 0) {
-            const nodeLines = this.visualNodes.map(node => 
-                `${node.label}: ${node.value} (${node.perturbationAmount})`
-            );
-            textDefinition += nodeLines.join('\n');
-        }
-        
-        // Update text area
-        document.getElementById('graph-input').value = textDefinition;
-        document.getElementById('graph-input').classList.remove('validation-error');
-        
-        this.syncInProgress = false;
     }
 
     loadExample(exampleType) {
