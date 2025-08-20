@@ -76,34 +76,35 @@
                     </div>
 
                     <div class="tab-content active" id="visual-builder">
+                        <div class="builder-actions">
+                            <button id="build-graph-visual" class="build-button">Build Graph from Visual</button>
+                            <button id="clear-graph" class="action-button secondary">Clear All</button>
+                        </div>
+
                         <div class="builder-section">
                             <h4>Nodes</h4>
                             <div class="node-management">
-                                <button id="add-node-btn" class="action-button">+ Add Node</button>
                                 <div class="node-list" id="node-list">
                                     <!-- Node items will be added here -->
                                 </div>
+                                <button id="add-node-btn" class="action-button">+ Add Node</button>
                             </div>
                         </div>
 
                         <div class="builder-section">
                             <h4>Connections (Adjacency List)</h4>
                             <div class="connections-container">
-                                <button id="add-connection-btn" class="action-button secondary">+ Add Connection</button>
                                 <div class="connections-list" id="connections-list">
                                     <!-- Connection items will be added here -->
                                 </div>
+                                <button id="add-connection-btn" class="action-button secondary">+ Add Connection</button>
                             </div>
-                        </div>
-
-                        <div class="builder-actions">
-                            <button id="build-graph-visual" class="build-button">Build Graph from Visual</button>
-                            <button id="clear-graph" class="action-button secondary">Clear All</button>
                         </div>
                     </div>
 
                     <div class="tab-content" id="text-builder">
                         <div class="input-section">
+                            <button id="build-graph">Build Graph from Text</button>
                             <div class="example-selector">
                                 <label for="example-select">Load Example:</label>
                                 <select id="example-select">
@@ -127,7 +128,6 @@ A: 50 (10)
 B: 30 (5)
 C: 40 (3)
 D: 20 (7)"></textarea>
-                            <button id="build-graph">Build Graph from Text</button>
                         </div>
                     </div>
                 </div>
@@ -145,6 +145,13 @@ D: 20 (7)"></textarea>
             
             <div class="instructions-content" id="instructions-content">
                 <div class="instructions">
+                    <h4>Getting Started:</h4>
+                    <ul>
+                        <li><strong>Quick Start:</strong> Use the example selector in the Graph Builder to load a pre-defined causal loop diagram</li>
+                        <li><strong>Visual Builder:</strong> Create nodes and connections using the visual interface</li>
+                        <li><strong>Text Builder:</strong> Define your graph using simple text notation</li>
+                    </ul>
+
                     <h4>Graph Definition Format:</h4>
                     <ul>
                         <li><strong>Connections:</strong> NodeA -> NodeB (multiplier, polarity)</li>
@@ -153,21 +160,67 @@ D: 20 (7)"></textarea>
                         <li><strong>Node Values:</strong> NodeName: initial_value (perturbation_amount)</li>
                         <li><strong>Perturbation Amount:</strong> Optional, defaults to 5 if not specified</li>
                     </ul>
-                    <h4>Features:</h4>
+
+                    <h4>Example Definition:</h4>
+                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0;">Population -> Resources (0.8, -)
+Resources -> QualityOfLife (0.6, +)
+QualityOfLife -> Population (0.5, +)
+
+Node values:
+Population: 100 (15)
+Resources: 80 (10)
+QualityOfLife: 70 (8)</pre>
+
+                    <h4>Simulation Features:</h4>
                     <ul>
-                        <li>Real-time value propagation animation</li>
-                        <li>Adjustable simulation speed and damping</li>
-                        <li>Interactive node value adjustment</li>
-                        <li>Manual perturbation with arrow controls on nodes</li>
-                        <li>Visual feedback for positive/negative connections</li>
+                        <li><strong>Real-time Animation:</strong> Watch values propagate through the causal loop</li>
+                        <li><strong>Speed Control:</strong> Adjust animation speed from 100ms to 2000ms</li>
+                        <li><strong>Damping Factor:</strong> Control system stabilization (0.1 = fast, 1.0 = oscillates)</li>
+                        <li><strong>Node Controls:</strong> Individual sliders for each node</li>
+                        <li><strong>Reset Function:</strong> Return all nodes to initial values</li>
                     </ul>
+
                     <h4>Manual Perturbation:</h4>
                     <ul>
                         <li><strong>Green up arrow:</strong> Click to increase node value by its perturbation amount</li>
                         <li><strong>Red down arrow:</strong> Click to decrease node value by its perturbation amount</li>
-                        <li>Arrows appear above and below each node</li>
-                        <li>Each node can have its own custom perturbation amount</li>
-                        <li>Use these to manually disturb the system and observe effects</li>
+                        <li><strong>Interactive Control:</strong> Arrows appear above and below each node</li>
+                        <li><strong>Custom Amounts:</strong> Each node can have its own perturbation amount</li>
+                        <li><strong>System Testing:</strong> Use these to manually disturb the system and observe effects</li>
+                    </ul>
+
+                    <h4>Visual Elements:</h4>
+                    <ul>
+                        <li><strong>Positive Connections:</strong> Blue arrows indicate positive relationships</li>
+                        <li><strong>Negative Connections:</strong> Red arrows indicate negative relationships</li>
+                        <li><strong>Connection Strength:</strong> Arrow thickness represents relationship strength</li>
+                        <li><strong>Node Colors:</strong> Nodes change color based on current values</li>
+                        <li><strong>Value Display:</strong> Current values shown on each node</li>
+                    </ul>
+
+                    <h4>Graph Controls:</h4>
+                    <ul>
+                        <li><strong>Zoom In/Out:</strong> Use + and - buttons to zoom</li>
+                        <li><strong>Reset Zoom:</strong> Click house icon to reset view</li>
+                        <li><strong>Fit to Content:</strong> Click square icon to fit all nodes</li>
+                        <li><strong>Pan:</strong> Click and drag to move the view</li>
+                    </ul>
+
+                    <h4>Understanding Causal Loops:</h4>
+                    <ul>
+                        <li><strong>Reinforcing Loops:</strong> Create exponential growth or decline</li>
+                        <li><strong>Balancing Loops:</strong> Create stabilizing behavior</li>
+                        <li><strong>Leverage Points:</strong> Identify high-influence nodes</li>
+                        <li><strong>Unintended Consequences:</strong> Observe cascade effects</li>
+                    </ul>
+
+                    <h4>Tips for Effective Use:</h4>
+                    <ul>
+                        <li><strong>Start Simple:</strong> Begin with 3-4 nodes and basic connections</li>
+                        <li><strong>Test Perturbations:</strong> Use manual controls to test system response</li>
+                        <li><strong>Observe Patterns:</strong> Look for oscillations or exponential growth</li>
+                        <li><strong>Iterate Design:</strong> Refine by adjusting multipliers and connections</li>
+                        <li><strong>Real-world Validation:</strong> Compare with actual observations</li>
                     </ul>
                 </div>
             </div>

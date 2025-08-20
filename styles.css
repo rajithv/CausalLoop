@@ -820,13 +820,34 @@ input[type="range"] {
 }
 
 .instructions-content.expanded {
-    max-height: 400px;
+    max-height: 500px;
+    overflow-y: auto;
     transition: max-height 0.4s ease-in;
 }
 
 .instructions {
     padding: 20px;
     color: #4a5568;
+}
+
+/* Custom scrollbar styling for instructions content */
+.instructions-content.expanded::-webkit-scrollbar {
+    width: 8px;
+}
+
+.instructions-content.expanded::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.instructions-content.expanded::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.instructions-content.expanded::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
 }
 
 /* Control arrows for manual perturbation */
@@ -916,7 +937,8 @@ input[type="range"] {
     }
     
     .instructions-content.expanded {
-        max-height: 350px;
+        max-height: 250px;
+        overflow-y: auto;
     }
     
     .builder-section {
