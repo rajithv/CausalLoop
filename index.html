@@ -43,9 +43,19 @@
             </div>
 
             <div class="visualization-panel">
-                <svg id="causal-diagram" width="800" height="600">
-                    <!-- SVG elements will be dynamically created here -->
-                </svg>
+                <div class="graph-controls">
+                    <button id="zoom-in" class="zoom-btn" title="Zoom In">+</button>
+                    <button id="zoom-out" class="zoom-btn" title="Zoom Out">−</button>
+                    <button id="zoom-reset" class="zoom-btn" title="Reset Zoom">⌂</button>
+                    <button id="fit-to-content" class="zoom-btn" title="Fit to Content">⊡</button>
+                </div>
+                <div class="graph-container" id="graph-container">
+                    <svg id="causal-diagram" width="1200" height="800">
+                        <g id="graph-content">
+                            <!-- SVG elements will be dynamically created here -->
+                        </g>
+                    </svg>
+                </div>
             </div>
         </div>
 

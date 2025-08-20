@@ -5,6 +5,8 @@ class CausalLoopDiagram {
         this.nodes = new Map();
         this.edges = [];
         this.svg = document.getElementById('causal-diagram');
+        this.graphContent = document.getElementById('graph-content');
+        this.graphContainer = document.getElementById('graph-container');
         this.simulation = null;
         this.animationSpeed = 500;
         this.dampingFactor = 0.9;
@@ -18,8 +20,20 @@ class CausalLoopDiagram {
         this.nextConnectionId = 1;
         this.syncInProgress = false;
         
+        // Zoom and pan properties
+        this.zoomLevel = 1;
+        this.minZoom = 0.1;
+        this.maxZoom = 5;
+        this.zoomStep = 0.2;
+        this.panX = 0;
+        this.panY = 0;
+        this.isDragging = false;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
+        
         this.initializeEventListeners();
         this.setupSVGDefinitions();
+        this.initializeZoomAndPan();
     }
 
     initializeEventListeners() {
@@ -67,6 +81,12 @@ class CausalLoopDiagram {
             this.dampingFactor = parseFloat(e.target.value);
             document.getElementById('damping-value').textContent = this.dampingFactor;
         });
+        
+        // Zoom and pan controls
+        document.getElementById('zoom-in').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoom-out').addEventListener('click', () => this.zoomOut());
+        document.getElementById('zoom-reset').addEventListener('click', () => this.resetZoom());
+        document.getElementById('fit-to-content').addEventListener('click', () => this.fitToContent());
     }
     
     toggleGraphBuilder() {
@@ -674,6 +694,129 @@ Risk: 25`
         this.svg.appendChild(defs);
     }
 
+    initializeZoomAndPan() {
+        // Mouse wheel zoom - less sensitive than button clicks
+        this.graphContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const wheelZoomStep = this.zoomStep * 0.3; // Make wheel zoom 30% as sensitive
+            const delta = e.deltaY > 0 ? -wheelZoomStep : wheelZoomStep;
+            this.zoom(this.zoomLevel + delta);
+        });
+        
+        // Pan functionality
+        this.graphContainer.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left mouse button
+                this.isDragging = true;
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+                this.graphContainer.style.cursor = 'grabbing';
+            }
+        });
+        
+        this.graphContainer.addEventListener('mousemove', (e) => {
+            if (this.isDragging) {
+                const deltaX = e.clientX - this.lastMouseX;
+                const deltaY = e.clientY - this.lastMouseY;
+                
+                this.graphContainer.scrollLeft -= deltaX;
+                this.graphContainer.scrollTop -= deltaY;
+                
+                this.lastMouseX = e.clientX;
+                this.lastMouseY = e.clientY;
+            }
+        });
+        
+        this.graphContainer.addEventListener('mouseup', () => {
+            this.isDragging = false;
+            this.graphContainer.style.cursor = 'grab';
+        });
+        
+        this.graphContainer.addEventListener('mouseleave', () => {
+            this.isDragging = false;
+            this.graphContainer.style.cursor = 'grab';
+        });
+    }
+    
+    zoomIn() {
+        this.zoom(this.zoomLevel + this.zoomStep);
+    }
+    
+    zoomOut() {
+        this.zoom(this.zoomLevel - this.zoomStep);
+    }
+    
+    zoom(newZoomLevel) {
+        const clampedZoom = Math.max(this.minZoom, Math.min(this.maxZoom, newZoomLevel));
+        if (clampedZoom !== this.zoomLevel) {
+            this.zoomLevel = clampedZoom;
+            this.applyZoom();
+        }
+    }
+    
+    resetZoom() {
+        this.zoomLevel = 1;
+        this.applyZoom();
+        // Center the content
+        this.graphContainer.scrollLeft = (this.svg.clientWidth - this.graphContainer.clientWidth) / 2;
+        this.graphContainer.scrollTop = (this.svg.clientHeight - this.graphContainer.clientHeight) / 2;
+    }
+    
+    applyZoom() {
+        this.graphContent.style.transform = `scale(${this.zoomLevel})`;
+        
+        // Adjust SVG size based on zoom to maintain scrolling
+        const baseWidth = 1200;
+        const baseHeight = 800;
+        const newWidth = baseWidth * this.zoomLevel;
+        const newHeight = baseHeight * this.zoomLevel;
+        
+        this.svg.setAttribute('width', newWidth);
+        this.svg.setAttribute('height', newHeight);
+    }
+    
+    fitToContent() {
+        if (this.nodes.size === 0) {
+            this.resetZoom();
+            return;
+        }
+        
+        // Calculate bounding box of all nodes
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        this.nodes.forEach(node => {
+            const x = node.x || 400;
+            const y = node.y || 300;
+            const radius = 30; // Node radius + padding
+            
+            minX = Math.min(minX, x - radius);
+            minY = Math.min(minY, y - radius);
+            maxX = Math.max(maxX, x + radius);
+            maxY = Math.max(maxY, y + radius);
+        });
+        
+        const contentWidth = maxX - minX;
+        const contentHeight = maxY - minY;
+        const containerWidth = this.graphContainer.clientWidth;
+        const containerHeight = this.graphContainer.clientHeight;
+        
+        // Calculate zoom to fit content with some padding
+        const zoomX = (containerWidth * 0.8) / contentWidth;
+        const zoomY = (containerHeight * 0.8) / contentHeight;
+        const newZoom = Math.min(zoomX, zoomY, this.maxZoom);
+        
+        this.zoom(newZoom);
+        
+        // Center the content
+        setTimeout(() => {
+            const centerX = (minX + maxX) / 2 * this.zoomLevel;
+            const centerY = (minY + maxY) / 2 * this.zoomLevel;
+            
+            this.graphContainer.scrollLeft = centerX - containerWidth / 2;
+            this.graphContainer.scrollTop = centerY - containerHeight / 2;
+        }, 100);
+    }
+
     parseGraphText(text) {
         const lines = text.split('\n').map(line => line.trim()).filter(line => line);
         const connections = [];
@@ -726,8 +869,7 @@ Risk: 25`
         // Clear existing graph
         this.nodes.clear();
         this.edges = [];
-        this.svg.innerHTML = '';
-        this.setupSVGDefinitions();
+        this.graphContent.innerHTML = '';
         
         // Extract unique node names
         const nodeNames = new Set();
@@ -832,7 +974,7 @@ Risk: 25`
         
         node.element = group;
         node.valueElement = value;
-        this.svg.appendChild(group);
+        this.graphContent.appendChild(group);
         
         // Add event listeners for the arrows
         increaseArrow.addEventListener('click', () => this.perturbNode(node.name, 'increase'));
@@ -866,7 +1008,7 @@ Risk: 25`
         line.classList.add('edge');
         line.classList.add(edge.polarity === '+' ? 'positive' : 'negative');
         
-        this.svg.appendChild(line);
+        this.graphContent.appendChild(line);
         
         // Add edge label
         const labelX = (startX + endX) / 2;
@@ -878,7 +1020,7 @@ Risk: 25`
         label.textContent = `${edge.multiplier}${edge.polarity}`;
         label.classList.add('edge-label');
         
-        this.svg.appendChild(label);
+        this.graphContent.appendChild(label);
         
         edge.element = line;
     }
