@@ -887,8 +887,8 @@ Risk: 25`
                 name: name,
                 value: value,
                 perturbationAmount: perturbAmount,
-                x: 0,
-                y: 0,
+                x: undefined, // Will be set by positionNodes
+                y: undefined, // Will be set by positionNodes
                 element: null
             });
             this.originalValues.set(name, value);
@@ -909,15 +909,151 @@ Risk: 25`
 
     positionNodes() {
         const nodeArray = Array.from(this.nodes.values());
+        if (nodeArray.length === 0) return;
+        
         const centerX = 400;
         const centerY = 300;
-        const radius = 150;
         
+        // Initialize positions with proper random distribution
         nodeArray.forEach((node, index) => {
+            // Always initialize positions for force-directed layout
             const angle = (2 * Math.PI * index) / nodeArray.length;
-            node.x = centerX + radius * Math.cos(angle);
-            node.y = centerY + radius * Math.sin(angle);
+            const radius = 60 + Math.random() * 40; // Random radius between 60-100
+            node.x = centerX + radius * Math.cos(angle) + (Math.random() - 0.5) * 50;
+            node.y = centerY + radius * Math.sin(angle) + (Math.random() - 0.5) * 50;
+            
+            // Initialize velocity
+            node.vx = 0;
+            node.vy = 0;
         });
+        
+        // Force-directed algorithm parameters
+        const iterations = 200;
+        const repulsionStrength = 2000;
+        const attractionStrength = 0.05;
+        const dampingFactor = 0.85;
+        const minDistance = 100; // Minimum distance between nodes
+        const idealEdgeLength = 140;
+        
+        // Run force-directed simulation
+        for (let iter = 0; iter < iterations; iter++) {
+            // Reset forces
+            nodeArray.forEach(node => {
+                node.fx = 0;
+                node.fy = 0;
+            });
+            
+            // Calculate repulsive forces between all pairs of nodes
+            for (let i = 0; i < nodeArray.length; i++) {
+                for (let j = i + 1; j < nodeArray.length; j++) {
+                    const node1 = nodeArray[i];
+                    const node2 = nodeArray[j];
+                    
+                    const dx = node2.x - node1.x;
+                    const dy = node2.y - node1.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        let force;
+                        if (distance < minDistance) {
+                            // Strong repulsion when too close
+                            force = repulsionStrength * 2 / (distance + 1);
+                        } else {
+                            // Normal repulsion
+                            force = repulsionStrength / (distance * distance + 10);
+                        }
+                        
+                        const fx = (dx / distance) * force;
+                        const fy = (dy / distance) * force;
+                        
+                        node1.fx -= fx;
+                        node1.fy -= fy;
+                        node2.fx += fx;
+                        node2.fy += fy;
+                    }
+                }
+            }
+            
+            // Calculate attractive forces along edges
+            this.edges.forEach(edge => {
+                const sourceNode = this.nodes.get(edge.source);
+                const targetNode = this.nodes.get(edge.target);
+                
+                if (sourceNode && targetNode) {
+                    const dx = targetNode.x - sourceNode.x;
+                    const dy = targetNode.y - sourceNode.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        // Spring force proportional to difference from ideal length
+                        const displacement = distance - idealEdgeLength;
+                        const springForce = attractionStrength * displacement;
+                        const fx = (dx / distance) * springForce;
+                        const fy = (dy / distance) * springForce;
+                        
+                        sourceNode.fx += fx;
+                        sourceNode.fy += fy;
+                        targetNode.fx -= fx;
+                        targetNode.fy -= fy;
+                    }
+                }
+            });
+            
+            // Apply forces and update positions
+            const timeStep = Math.max(0.1, 1 - iter / iterations); // Reduce time step over time
+            nodeArray.forEach(node => {
+                // Update velocity with damping
+                node.vx = (node.vx + node.fx * timeStep) * dampingFactor;
+                node.vy = (node.vy + node.fy * timeStep) * dampingFactor;
+                
+                // Update position
+                node.x += node.vx;
+                node.y += node.vy;
+                
+                // Keep nodes within reasonable bounds with soft boundaries
+                const margin = 80;
+                const maxX = 720;
+                const maxY = 520;
+                
+                if (node.x < margin) {
+                    node.x = margin;
+                    node.vx = Math.abs(node.vx) * 0.5; // Bounce back
+                } else if (node.x > maxX) {
+                    node.x = maxX;
+                    node.vx = -Math.abs(node.vx) * 0.5; // Bounce back
+                }
+                
+                if (node.y < margin) {
+                    node.y = margin;
+                    node.vy = Math.abs(node.vy) * 0.5; // Bounce back
+                } else if (node.y > maxY) {
+                    node.y = maxY;
+                    node.vy = -Math.abs(node.vy) * 0.5; // Bounce back
+                }
+            });
+            
+            // Early termination if system has stabilized
+            if (iter % 10 === 0) { // Check every 10 iterations
+                const totalKineticEnergy = nodeArray.reduce((sum, node) => {
+                    return sum + (node.vx * node.vx + node.vy * node.vy);
+                }, 0);
+                
+                if (totalKineticEnergy < 0.1) {
+                    console.log(`Force-directed layout converged after ${iter} iterations`);
+                    break; // System has stabilized
+                }
+            }
+        }
+        
+        // Clean up physics properties
+        nodeArray.forEach(node => {
+            delete node.vx;
+            delete node.vy;
+            delete node.fx;
+            delete node.fy;
+        });
+        
+        console.log(`Positioned ${nodeArray.length} nodes using force-directed layout`);
     }
 
     renderGraph() {
