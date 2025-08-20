@@ -37,7 +37,11 @@ class CausalLoopDiagram {
     }
 
     initializeEventListeners() {
-        document.getElementById('build-graph').addEventListener('click', () => this.buildGraphFromText());
+        // Unified build graph button
+        document.getElementById('build-graph-unified').addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent bubbling to header
+            this.buildGraphFromActiveTab();
+        });
         document.getElementById('start-simulation').addEventListener('click', () => this.startSimulation());
         document.getElementById('stop-simulation').addEventListener('click', () => this.stopSimulation());
         document.getElementById('reset-simulation').addEventListener('click', () => this.resetSimulation());
@@ -56,8 +60,6 @@ class CausalLoopDiagram {
         // Visual builder events
         document.getElementById('add-node-btn').addEventListener('click', () => this.addNode());
         document.getElementById('add-connection-btn').addEventListener('click', () => this.addConnection());
-        document.getElementById('build-graph-visual').addEventListener('click', () => this.buildGraphFromVisual());
-        document.getElementById('clear-graph').addEventListener('click', () => this.clearVisualBuilder());
         
         // Text definition sync
         document.getElementById('graph-input').addEventListener('input', () => this.syncFromText());
@@ -326,6 +328,23 @@ class CausalLoopDiagram {
         }
     }
     
+    buildGraphFromActiveTab() {
+        // Determine which tab is currently active
+        const visualTab = document.getElementById('visual-builder');
+        const textTab = document.getElementById('text-builder');
+        
+        if (visualTab && visualTab.classList.contains('active')) {
+            // Visual tab is active
+            this.buildGraphFromVisual();
+        } else if (textTab && textTab.classList.contains('active')) {
+            // Text tab is active  
+            this.buildGraphFromText();
+        } else {
+            // Fallback to text builder if no tab is clearly active
+            this.buildGraphFromText();
+        }
+    }
+    
     buildGraphFromVisual() {
         if (this.visualNodes.length === 0) {
             alert('Please add some nodes first.');
@@ -360,9 +379,6 @@ class CausalLoopDiagram {
         
         // Build the graph
         this.buildGraph(connections, nodeValues, perturbationAmounts);
-        
-        // Collapse the builder
-        this.toggleGraphBuilder();
     }
     
     clearVisualBuilder() {

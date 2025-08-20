@@ -61,14 +61,19 @@
 
         <div class="graph-builder-section">
             <div class="graph-builder-header" id="graph-builder-toggle">
-                <h3>
-                    <span class="toggle-icon">▶</span>
-                    Graph Builder
-                </h3>
-                <p class="builder-description">Define your causal loop graph structure and initial values</p>
+                <div class="header-content">
+                    <div class="header-text">
+                        <h3>
+                            <span class="toggle-icon expanded">▶</span>
+                            Graph Builder
+                        </h3>
+                        <p class="builder-description">Define your causal loop graph structure and initial values</p>
+                    </div>
+                    <button id="build-graph-unified" class="build-button-header">Build Graph</button>
+                </div>
             </div>
             
-            <div class="graph-builder-content" id="graph-builder-content">
+            <div class="graph-builder-content expanded" id="graph-builder-content">
                 <div class="graph-builder-scrollable">
                     <div class="builder-tabs">
                         <button class="tab-button active" data-tab="visual">Visual Builder</button>
@@ -76,11 +81,6 @@
                     </div>
 
                     <div class="tab-content active" id="visual-builder">
-                        <div class="builder-actions">
-                            <button id="build-graph-visual" class="build-button">Build Graph from Visual</button>
-                            <button id="clear-graph" class="action-button secondary">Clear All</button>
-                        </div>
-
                         <div class="builder-section">
                             <h4>Nodes</h4>
                             <div class="node-management">
@@ -104,7 +104,6 @@
 
                     <div class="tab-content" id="text-builder">
                         <div class="input-section">
-                            <button id="build-graph">Build Graph from Text</button>
                             <div class="example-selector">
                                 <label for="example-select">Load Example:</label>
                                 <select id="example-select">

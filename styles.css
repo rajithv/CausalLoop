@@ -442,12 +442,49 @@ input[type="range"] {
     background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
 
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.header-text {
+    flex: 1;
+}
+
 .graph-builder-header h3 {
     margin: 0 0 5px 0;
     font-size: 1.3em;
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.build-button-header {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 20px;
+    white-space: nowrap;
+}
+
+.build-button-header:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.build-button-header:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-icon {
@@ -939,6 +976,18 @@ input[type="range"] {
     .instructions-content.expanded {
         max-height: 250px;
         overflow-y: auto;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .build-button-header {
+        margin-left: 0;
+        align-self: stretch;
+        text-align: center;
     }
     
     .builder-section {
