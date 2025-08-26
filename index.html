@@ -69,7 +69,10 @@
                         </h3>
                         <p class="builder-description">Define your causal loop graph structure and initial values</p>
                     </div>
-                    <button id="build-graph-unified" class="build-button-header">Build Graph</button>
+                    <div class="header-buttons">
+                        <button id="build-graph-unified" class="build-button-header">Build Graph</button>
+                        <button id="export-graph" class="build-button-header export-btn">Export Graph</button>
+                    </div>
                 </div>
             </div>
             
@@ -114,6 +117,11 @@
                                     <option value="climate">Climate Change</option>
                                     <option value="organization">Organizational Learning</option>
                                 </select>
+                            </div>
+                            <div class="import-section">
+                                <label for="import-file">Import Graph:</label>
+                                <input type="file" id="import-file" accept=".txt,.clg" class="import-input">
+                                <button id="import-graph" class="import-button">Import from File</button>
                             </div>
                             <textarea id="graph-input" placeholder="Enter your causal loop graph definition:
 Example:
@@ -161,6 +169,7 @@ D: #ffa500"></textarea>
                         <li><strong>Quick Start:</strong> Use the example selector in the Graph Builder to load a pre-defined causal loop diagram</li>
                         <li><strong>Visual Builder:</strong> Create nodes and connections using the visual interface with color pickers</li>
                         <li><strong>Text Builder:</strong> Define your graph using simple text notation including hex colors</li>
+                        <li><strong>Export/Import:</strong> Save your graphs as .clg files and load them later</li>
                     </ul>
 
                     <h4>Graph Definition Format:</h4>
@@ -244,6 +253,17 @@ QualityOfLife: #ff6b6b</pre>
                         <li><strong>Observe Patterns:</strong> Look for oscillations or exponential growth</li>
                         <li><strong>Iterate Design:</strong> Refine by adjusting multipliers and connections</li>
                         <li><strong>Real-world Validation:</strong> Compare with actual observations</li>
+                        <li><strong>Save Your Work:</strong> Use Export Graph to save complex diagrams as .clg files</li>
+                        <li><strong>Share Diagrams:</strong> Export and share .clg files with colleagues</li>
+                    </ul>
+
+                    <h4>File Operations:</h4>
+                    <ul>
+                        <li><strong>Export Graph:</strong> Click "Export Graph" to save current diagram as a .clg file</li>
+                        <li><strong>Import Graph:</strong> Use "Import from File" to load previously saved .clg or .txt files</li>
+                        <li><strong>File Format:</strong> Both .clg and .txt files use the same plain text format</li>
+                        <li><strong>Automatic Naming:</strong> Exported files include timestamp for easy organization</li>
+                        <li><strong>Validation:</strong> Import validates file format and shows errors if invalid</li>
                     </ul>
                 </div>
             </div>

@@ -240,6 +240,61 @@ button:active {
     outline: none;
 }
 
+.import-section {
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.import-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #4a5568;
+}
+
+.import-input {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid #e2e8f0;
+    border-radius: 5px;
+    font-size: 14px;
+    background: white;
+    margin-bottom: 10px;
+}
+
+.import-input:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.import-button {
+    width: 100%;
+    padding: 8px 16px;
+    background: #48bb78;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.import-button:hover {
+    background: #38a169;
+    transform: translateY(-1px);
+}
+
+.import-button:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .control-group {
     margin-bottom: 15px;
 }
@@ -446,6 +501,13 @@ input[type="range"] {
     width: 100%;
 }
 
+.header-buttons {
+    display: flex;
+    gap: 10px;
+    margin-left: 20px;
+    white-space: nowrap;
+}
+
 .header-text {
     flex: 1;
 }
@@ -468,8 +530,12 @@ input[type="range"] {
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin-left: 20px;
     white-space: nowrap;
+}
+
+.build-button-header.export-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .build-button-header:hover {
@@ -1029,9 +1095,14 @@ input[type="range"] {
         gap: 15px;
     }
     
-    .build-button-header {
+    .header-buttons {
         margin-left: 0;
         align-self: stretch;
+        justify-content: space-between;
+    }
+    
+    .build-button-header {
+        flex: 1;
         text-align: center;
     }
     

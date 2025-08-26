@@ -43,6 +43,17 @@ class CausalLoopDiagram {
             e.stopPropagation(); // Prevent bubbling to header
             this.buildGraphFromActiveTab();
         });
+        
+        // Export graph button
+        document.getElementById('export-graph').addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent bubbling to header
+            this.exportGraph();
+        });
+        
+        // Import graph button
+        document.getElementById('import-graph').addEventListener('click', () => {
+            this.importGraph();
+        });
         document.getElementById('start-simulation').addEventListener('click', () => this.startSimulation());
         document.getElementById('stop-simulation').addEventListener('click', () => this.stopSimulation());
         document.getElementById('reset-simulation').addEventListener('click', () => this.resetSimulation());
@@ -1420,6 +1431,94 @@ class CausalLoopDiagram {
         } else {
             this.isRunning = false;
         }
+    }
+
+    exportGraph() {
+        // Get the current graph definition from the text area
+        const textArea = document.getElementById('graph-input');
+        let graphData = textArea.value.trim();
+        
+        // If text area is empty, try to generate from visual builder
+        if (!graphData && this.visualNodes.length > 0) {
+            this.syncToText();
+            graphData = textArea.value.trim();
+        }
+        
+        if (!graphData) {
+            alert('No graph data to export. Please create a graph first.');
+            return;
+        }
+        
+        // Create filename with timestamp
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `causal-loop-graph-${timestamp}.clg`;
+        
+        // Create and download file
+        const blob = new Blob([graphData], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        console.log('Graph exported as:', filename);
+    }
+
+    importGraph() {
+        const fileInput = document.getElementById('import-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('Please select a file to import.');
+            return;
+        }
+        
+        // Check file extension
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        if (fileExtension !== 'txt' && fileExtension !== 'clg') {
+            alert('Please select a .txt or .clg file.');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const graphData = e.target.result;
+                
+                // Validate the graph data by trying to parse it
+                const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors } = this.parseGraphText(graphData);
+                
+                // If parsing succeeds, load the data
+                const textArea = document.getElementById('graph-input');
+                textArea.value = graphData;
+                textArea.classList.remove('validation-error');
+                
+                // Sync to visual builder and build the graph
+                this.syncFromText();
+                this.buildGraphFromText();
+                
+                // Clear the file input
+                fileInput.value = '';
+                
+                alert('Graph imported successfully!');
+                console.log('Graph imported from:', file.name);
+                
+            } catch (error) {
+                alert('Error importing graph: ' + error.message + '\nPlease check the file format.');
+                console.error('Import error:', error);
+            }
+        };
+        
+        reader.onerror = () => {
+            alert('Error reading the file. Please try again.');
+        };
+        
+        reader.readAsText(file);
     }
 }
 
