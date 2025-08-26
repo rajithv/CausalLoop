@@ -134,7 +134,8 @@ class CausalLoopDiagram {
             id: nodeId,
             label: `Node ${nodeId}`,
             value: 50,
-            perturbationAmount: 5
+            perturbationAmount: 5,
+            color: '#667eea'
         };
         
         this.visualNodes.push(nodeData);
@@ -195,6 +196,8 @@ class CausalLoopDiagram {
                 <div class="node-number">${node.id}</div>
                 <input type="text" class="node-input" value="${node.label}" 
                        placeholder="Node label" onchange="app.updateNodeLabel(${node.id}, this.value)">
+                <input type="color" class="color-input" value="${node.color}" title="Node Color"
+                       onchange="app.updateNodeColor(${node.id}, this.value)">
                 <input type="number" class="value-input" value="${node.value}" min="0" max="100"
                        title="Initial Value" onchange="app.updateNodeValue(${node.id}, this.value)">
                 <input type="number" class="perturb-input" value="${node.perturbationAmount}" min="0.1" max="50" step="0.1"
@@ -306,6 +309,14 @@ class CausalLoopDiagram {
             this.syncToText();
         }
     }
+
+    updateNodeColor(nodeId, color) {
+        const node = this.visualNodes.find(n => n.id === nodeId);
+        if (node) {
+            node.color = color;
+            this.syncToText();
+        }
+    }
     
     buildGraphFromActiveTab() {
         // Determine which tab is currently active
@@ -334,11 +345,13 @@ class CausalLoopDiagram {
         const connections = [];
         const nodeValues = new Map();
         const perturbationAmounts = new Map();
+        const nodeColors = new Map();
         
         // Add nodes
         this.visualNodes.forEach(node => {
             nodeValues.set(node.label, node.value);
             perturbationAmounts.set(node.label, node.perturbationAmount);
+            nodeColors.set(node.label, node.color);
         });
         
         // Add connections from adjacency list
@@ -357,7 +370,7 @@ class CausalLoopDiagram {
         });
         
         // Build the graph
-        this.buildGraph(connections, nodeValues, perturbationAmounts);
+        this.buildGraph(connections, nodeValues, perturbationAmounts, new Map(), nodeColors);
     }
     
     clearVisualBuilder() {
@@ -380,7 +393,7 @@ class CausalLoopDiagram {
         const text = textArea.value;
         
         try {
-            const { connections, nodeValues, perturbationAmounts, nodeLabels } = this.parseGraphText(text);
+            const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors } = this.parseGraphText(text);
             
             // Clear validation error
             textArea.classList.remove('validation-error');
@@ -393,6 +406,7 @@ class CausalLoopDiagram {
             });
             nodeValues.forEach((value, index) => nodeIndices.add(index));
             nodeLabels.forEach((label, index) => nodeIndices.add(index));
+            nodeColors.forEach((color, index) => nodeIndices.add(index));
             
             // Update visual nodes (preserve existing IDs where possible)
             const oldNodes = [...this.visualNodes];
@@ -416,7 +430,8 @@ class CausalLoopDiagram {
                         id: index,
                         label: nodeLabel,
                         value: nodeValues.get(index) || existingNode.value,
-                        perturbationAmount: perturbationAmounts.get(index) || existingNode.perturbationAmount
+                        perturbationAmount: perturbationAmounts.get(index) || existingNode.perturbationAmount,
+                        color: nodeColors.get(index) || existingNode.color || '#667eea'
                     });
                 } else {
                     // Create new node
@@ -424,7 +439,8 @@ class CausalLoopDiagram {
                         id: index,
                         label: nodeLabel,
                         value: nodeValues.get(index) || 50,
-                        perturbationAmount: perturbationAmounts.get(index) || 5
+                        perturbationAmount: perturbationAmounts.get(index) || 5,
+                        color: nodeColors.get(index) || '#667eea'
                     });
                 }
             });
@@ -501,7 +517,15 @@ class CausalLoopDiagram {
             const labelLines = this.visualNodes.map(node => 
                 `${node.id}: "${node.label}"`
             );
-            textDefinition += labelLines.join('\n');
+            textDefinition += labelLines.join('\n') + '\n\n';
+        }
+        
+        // Add node colors
+        if (this.visualNodes.length > 0) {
+            const colorLines = this.visualNodes.map(node => 
+                `${node.id}: ${node.color}`
+            );
+            textDefinition += colorLines.join('\n');
         }
         
         // Update text area
@@ -842,6 +866,7 @@ class CausalLoopDiagram {
         const nodeValues = new Map();
         const perturbationAmounts = new Map();
         const nodeLabels = new Map();
+        const nodeColors = new Map();
         
         lines.forEach(line => {
             // Parse connections: 1 -> 2 (0.8, +)
@@ -874,9 +899,17 @@ class CausalLoopDiagram {
                 nodeLabels.set(parseInt(nodeIndex), label);
                 return;
             }
+            
+            // Parse node colors: 1: #ff0000
+            const colorMatch = line.match(/(\d+):\s*(#[a-fA-F0-9]{6})/);
+            if (colorMatch) {
+                const [, nodeIndex, color] = colorMatch;
+                nodeColors.set(parseInt(nodeIndex), color);
+                return;
+            }
         });
         
-        return { connections, nodeValues, perturbationAmounts, nodeLabels };
+        return { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors };
     }
 
     buildGraphFromText() {
@@ -887,14 +920,14 @@ class CausalLoopDiagram {
         }
 
         try {
-            const { connections, nodeValues, perturbationAmounts, nodeLabels } = this.parseGraphText(input);
-            this.buildGraph(connections, nodeValues, perturbationAmounts, nodeLabels);
+            const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors } = this.parseGraphText(input);
+            this.buildGraph(connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors);
         } catch (error) {
             alert('Error parsing graph definition: ' + error.message);
         }
     }
 
-    buildGraph(connections, nodeValues, perturbationAmounts = new Map(), nodeLabels = new Map()) {
+    buildGraph(connections, nodeValues, perturbationAmounts = new Map(), nodeLabels = new Map(), nodeColors = new Map()) {
         // Clear existing graph
         this.nodes.clear();
         this.edges = [];
@@ -908,18 +941,21 @@ class CausalLoopDiagram {
         });
         nodeValues.forEach((value, index) => nodeIndices.add(index));
         nodeLabels.forEach((label, index) => nodeIndices.add(index));
+        nodeColors.forEach((color, index) => nodeIndices.add(index));
         
         // Create nodes using indices as keys
         nodeIndices.forEach(index => {
             const value = nodeValues.get(index) || 50; // Default value
             const perturbAmount = perturbationAmounts.get(index) || 5; // Default perturbation
             const label = nodeLabels.get(index) || `Node ${index}`; // Default label
+            const color = nodeColors.get(index) || '#667eea'; // Default color
             
             this.nodes.set(index, {
                 name: index,
                 label: label,
                 value: value,
                 perturbationAmount: perturbAmount,
+                color: color,
                 x: undefined, // Will be set by positionNodes
                 y: undefined, // Will be set by positionNodes
                 element: null
@@ -1102,11 +1138,14 @@ class CausalLoopDiagram {
         group.classList.add('node');
         group.setAttribute('data-node', node.name);
         
-        // Node circle
+        // Node circle with custom color
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', node.x);
         circle.setAttribute('cy', node.y);
         circle.setAttribute('r', 25);
+        circle.setAttribute('fill', node.color || '#667eea');
+        circle.setAttribute('stroke', this.darkenColor(node.color || '#667eea', 0.2));
+        circle.setAttribute('stroke-width', '2');
         group.appendChild(circle);
         
         // Increase arrow (above node)
@@ -1148,6 +1187,15 @@ class CausalLoopDiagram {
         // Add event listeners for the arrows
         increaseArrow.addEventListener('click', () => this.perturbNode(node.name, 'increase'));
         decreaseArrow.addEventListener('click', () => this.perturbNode(node.name, 'decrease'));
+    }
+
+    // Helper function to darken colors for the stroke
+    darkenColor(color, amount) {
+        const hex = color.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - Math.round(255 * amount));
+        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - Math.round(255 * amount));
+        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - Math.round(255 * amount));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 
     renderEdge(edge) {

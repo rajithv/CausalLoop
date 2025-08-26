@@ -287,13 +287,10 @@ input[type="range"] {
 }
 
 .node circle {
-    fill: #667eea;
-    stroke: #4c51bf;
     stroke-width: 2;
 }
 
 .node:hover circle {
-    fill: #5a67d8;
     stroke-width: 3;
 }
 
@@ -689,6 +686,21 @@ input[type="range"] {
     border-radius: 4px;
     font-size: 12px;
     text-align: center;
+}
+
+.color-input {
+    flex: 0 0 40px;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.color-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
 .remove-node-btn {

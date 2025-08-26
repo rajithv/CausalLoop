@@ -126,7 +126,19 @@ Node values (with optional perturbation amounts):
 A: 50 (10)
 B: 30 (5)
 C: 40 (3)
-D: 20 (7)"></textarea>
+D: 20 (7)
+
+Node labels:
+A: &quot;Population&quot;
+B: &quot;Resources&quot;
+C: &quot;Quality of Life&quot;
+D: &quot;Growth Rate&quot;
+
+Node colors (hex codes):
+A: #4a90e2
+B: #50c878
+C: #ff6b6b
+D: #ffa500"></textarea>
                         </div>
                     </div>
                 </div>
@@ -147,8 +159,8 @@ D: 20 (7)"></textarea>
                     <h4>Getting Started:</h4>
                     <ul>
                         <li><strong>Quick Start:</strong> Use the example selector in the Graph Builder to load a pre-defined causal loop diagram</li>
-                        <li><strong>Visual Builder:</strong> Create nodes and connections using the visual interface</li>
-                        <li><strong>Text Builder:</strong> Define your graph using simple text notation</li>
+                        <li><strong>Visual Builder:</strong> Create nodes and connections using the visual interface with color pickers</li>
+                        <li><strong>Text Builder:</strong> Define your graph using simple text notation including hex colors</li>
                     </ul>
 
                     <h4>Graph Definition Format:</h4>
@@ -158,6 +170,8 @@ D: 20 (7)"></textarea>
                         <li><strong>Polarity:</strong> + (positive) or - (negative)</li>
                         <li><strong>Node Values:</strong> NodeName: initial_value (perturbation_amount)</li>
                         <li><strong>Perturbation Amount:</strong> Optional, defaults to 5 if not specified</li>
+                        <li><strong>Node Labels:</strong> NodeName: "Display Label"</li>
+                        <li><strong>Node Colors:</strong> NodeName: #hexcolor (e.g., #ff0000 for red)</li>
                     </ul>
 
                     <h4>Example Definition:</h4>
@@ -168,7 +182,17 @@ QualityOfLife -> Population (0.5, +)
 Node values:
 Population: 100 (15)
 Resources: 80 (10)
-QualityOfLife: 70 (8)</pre>
+QualityOfLife: 70 (8)
+
+Node labels:
+Population: "Population Growth"
+Resources: "Natural Resources"
+QualityOfLife: "Quality of Life"
+
+Node colors:
+Population: #4a90e2
+Resources: #50c878
+QualityOfLife: #ff6b6b</pre>
 
                     <h4>Simulation Features:</h4>
                     <ul>
