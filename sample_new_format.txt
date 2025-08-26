@@ -1,0 +1,23 @@
+Sample Causal Loop with New Index-Based Format:
+
+Connections (using indices):
+1 -> 2 (0.6, +)
+2 -> 3 (0.7, -)
+3 -> 1 (0.5, +)
+
+Node Values and Perturbations:
+1: 50 (10)
+2: 35 (5)
+3: 60 (8)
+
+Node Labels:
+1: "Population Growth"
+2: "Resource Consumption" 
+3: "Environmental Quality"
+
+This new format separates:
+- Node indices (1, 2, 3...) which are automatically assigned
+- Node values and perturbation amounts
+- Node labels which can be descriptive names in quotes
+
+The visual builder will show the index numbers, and users can edit the labels separately.

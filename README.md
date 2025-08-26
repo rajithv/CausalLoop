@@ -113,3 +113,7 @@ The application consists of three main components:
 ## License
 
 MIT License - see LICENSE file for details.
+
+## Running
+
+cd <location> && python3 -m http.server 8080

@@ -19,6 +19,7 @@ class CausalLoopDiagram {
         this.nextNodeId = 1;
         this.nextConnectionId = 1;
         this.syncInProgress = false;
+        this.nodeLabels = new Map(); // Map from index to label
         
         // Zoom and pan properties
         this.zoomLevel = 1;
@@ -251,10 +252,10 @@ class CausalLoopDiagram {
     updateNodeLabel(nodeId, label) {
         const node = this.visualNodes.find(n => n.id === nodeId);
         if (node && node.label !== label) {
-            const oldLabel = node.label;
             node.label = label;
+            this.nodeLabels.set(nodeId, label);
             this.renderConnectionsList(); // Update connection dropdowns
-            this.updateTextLabels(oldLabel, label);
+            this.syncToText(); // Update text definition
         }
     }
     
@@ -288,28 +289,6 @@ class CausalLoopDiagram {
             connection.polarity = polarity;
             this.syncToText();
         }
-    }
-    
-    updateTextLabels(oldLabel, newLabel) {
-        if (this.syncInProgress) return;
-        this.syncInProgress = true;
-        
-        const textArea = document.getElementById('graph-input');
-        let text = textArea.value;
-        
-        // Replace node labels in connections
-        const connectionRegex = new RegExp(`\\b${oldLabel}\\b(?=\\s*->|(?:\\s*<-))`, 'g');
-        const targetRegex = new RegExp(`(?<=->\\s*)\\b${oldLabel}\\b`, 'g');
-        const valueRegex = new RegExp(`^${oldLabel}:`, 'gm');
-        
-        text = text.replace(connectionRegex, newLabel);
-        text = text.replace(targetRegex, newLabel);
-        text = text.replace(valueRegex, `${newLabel}:`);
-        
-        textArea.value = text;
-        textArea.classList.remove('validation-error');
-        
-        this.syncInProgress = false;
     }
     
     updateNodeValue(nodeId, value) {
@@ -401,61 +380,65 @@ class CausalLoopDiagram {
         const text = textArea.value;
         
         try {
-            const { connections, nodeValues, perturbationAmounts } = this.parseGraphText(text);
+            const { connections, nodeValues, perturbationAmounts, nodeLabels } = this.parseGraphText(text);
             
             // Clear validation error
             textArea.classList.remove('validation-error');
             
-            // Extract unique node names and create visual nodes
-            const nodeNames = new Set();
+            // Extract unique node indices and create visual nodes
+            const nodeIndices = new Set();
             connections.forEach(conn => {
-                nodeNames.add(conn.source);
-                nodeNames.add(conn.target);
+                nodeIndices.add(conn.source);
+                nodeIndices.add(conn.target);
             });
-            nodeValues.forEach((value, name) => nodeNames.add(name));
+            nodeValues.forEach((value, index) => nodeIndices.add(index));
+            nodeLabels.forEach((label, index) => nodeIndices.add(index));
             
             // Update visual nodes (preserve existing IDs where possible)
             const oldNodes = [...this.visualNodes];
             this.visualNodes = [];
-            let nodeId = 1;
+            this.nodeLabels.clear();
             
-            nodeNames.forEach(name => {
-                // Try to find existing node with same label
-                const existingNode = oldNodes.find(n => n.label === name);
+            // Sort indices to maintain consistent order
+            const sortedIndices = Array.from(nodeIndices).sort((a, b) => a - b);
+            
+            sortedIndices.forEach(index => {
+                // Try to find existing node with same index
+                const existingNode = oldNodes.find(n => n.id === index);
+                
+                const nodeLabel = nodeLabels.get(index) || `Node ${index}`;
+                this.nodeLabels.set(index, nodeLabel);
                 
                 if (existingNode) {
                     // Keep existing node with same ID
                     this.visualNodes.push({
                         ...existingNode,
-                        label: name,
-                        value: nodeValues.get(name) || existingNode.value,
-                        perturbationAmount: perturbationAmounts.get(name) || existingNode.perturbationAmount
+                        id: index,
+                        label: nodeLabel,
+                        value: nodeValues.get(index) || existingNode.value,
+                        perturbationAmount: perturbationAmounts.get(index) || existingNode.perturbationAmount
                     });
                 } else {
                     // Create new node
                     this.visualNodes.push({
-                        id: nodeId,
-                        label: name,
-                        value: nodeValues.get(name) || 50,
-                        perturbationAmount: perturbationAmounts.get(name) || 5
+                        id: index,
+                        label: nodeLabel,
+                        value: nodeValues.get(index) || 50,
+                        perturbationAmount: perturbationAmounts.get(index) || 5
                     });
                 }
-                nodeId++;
             });
             
-            // Reassign IDs to maintain order
-            this.visualNodes.forEach((node, index) => {
-                node.id = index + 1;
-            });
-            this.nextNodeId = this.visualNodes.length + 1;
+            // Set next node ID to the next available index
+            this.nextNodeId = sortedIndices.length > 0 ? Math.max(...sortedIndices) + 1 : 1;
             
             // Update visual connections
             this.visualConnections = [];
             let connectionId = 1;
             
             connections.forEach(conn => {
-                const fromNode = this.visualNodes.find(n => n.label === conn.source);
-                const toNode = this.visualNodes.find(n => n.label === conn.target);
+                const fromNode = this.visualNodes.find(n => n.id === conn.source);
+                const toNode = this.visualNodes.find(n => n.id === conn.target);
                 
                 if (fromNode && toNode) {
                     this.visualConnections.push({
@@ -489,13 +472,13 @@ class CausalLoopDiagram {
         
         let textDefinition = '';
         
-        // Generate connections from adjacency list
+        // Generate connections using node indices
         const connections = this.visualConnections.map(conn => {
             const fromNode = this.visualNodes.find(n => n.id === conn.fromNodeId);
             const toNode = this.visualNodes.find(n => n.id === conn.toNodeId);
             
             if (fromNode && toNode) {
-                return `${fromNode.label} -> ${toNode.label} (${conn.multiplier}, ${conn.polarity})`;
+                return `${fromNode.id} -> ${toNode.id} (${conn.multiplier}, ${conn.polarity})`;
             }
             return null;
         }).filter(conn => conn !== null);
@@ -508,36 +491,22 @@ class CausalLoopDiagram {
         // Add node values
         if (this.visualNodes.length > 0) {
             const nodeLines = this.visualNodes.map(node => 
-                `${node.label}: ${node.value} (${node.perturbationAmount})`
+                `${node.id}: ${node.value} (${node.perturbationAmount})`
             );
-            textDefinition += nodeLines.join('\n');
+            textDefinition += nodeLines.join('\n') + '\n\n';
+        }
+        
+        // Add node labels
+        if (this.visualNodes.length > 0) {
+            const labelLines = this.visualNodes.map(node => 
+                `${node.id}: "${node.label}"`
+            );
+            textDefinition += labelLines.join('\n');
         }
         
         // Update text area
         document.getElementById('graph-input').value = textDefinition;
         document.getElementById('graph-input').classList.remove('validation-error');
-        
-        this.syncInProgress = false;
-    }
-    
-    updateTextLabels(oldLabel, newLabel) {
-        if (this.syncInProgress) return;
-        this.syncInProgress = true;
-        
-        const textArea = document.getElementById('graph-input');
-        let text = textArea.value;
-        
-        // Replace node labels in connections
-        const connectionRegex = new RegExp(`\b${oldLabel}\b(?=\s*->|(?:\s*<-))`, 'g');
-        const targetRegex = new RegExp(`(?<=->\s*)\b${oldLabel}\b`, 'g');
-        const valueRegex = new RegExp(`^${oldLabel}:`, 'gm');
-        
-        text = text.replace(connectionRegex, newLabel);
-        text = text.replace(targetRegex, newLabel);
-        text = text.replace(valueRegex, `${newLabel}:`);
-        
-        textArea.value = text;
-        textArea.classList.remove('validation-error');
         
         this.syncInProgress = false;
     }
@@ -566,8 +535,8 @@ class CausalLoopDiagram {
     applyConnectionsToMatrix(connections) {
         // Apply connections from text definition (these override existing ones)
         connections.forEach(conn => {
-            const fromNode = this.visualNodes.find(n => n.label === conn.source);
-            const toNode = this.visualNodes.find(n => n.label === conn.target);
+            const fromNode = this.visualNodes.find(n => n.id === conn.source);
+            const toNode = this.visualNodes.find(n => n.id === conn.target);
             
             if (fromNode && toNode) {
                 const multiplierInput = document.querySelector(
@@ -585,75 +554,109 @@ class CausalLoopDiagram {
 
     loadExample(exampleType) {
         const examples = {
-            'simple': `A -> B (0.8, +)
-B -> C (0.6, -)
-C -> A (0.5, +)
-A -> D (0.3, +)
-D -> B (0.4, -)
+            'simple': `1 -> 2 (0.8, +)
+2 -> 3 (0.6, -)
+3 -> 1 (0.5, +)
+1 -> 4 (0.3, +)
+4 -> 2 (0.4, -)
 
-A: 50
-B: 30
-C: 40
-D: 20`,
-            'population': `Population -> BirthRate (0.7, +)
-BirthRate -> Population (0.8, +)
-Population -> DeathRate (0.4, +)
-DeathRate -> Population (0.6, -)
-Population -> Resources (0.5, -)
-Resources -> DeathRate (0.3, +)
+1: 50 (5)
+2: 30 (5)
+3: 40 (5)
+4: 20 (5)
 
-Population: 50
-BirthRate: 30
-DeathRate: 20
-Resources: 70`,
-            'economic': `Investment -> Jobs (0.8, +)
-Jobs -> Income (0.9, +)
-Income -> Consumption (0.7, +)
-Consumption -> Demand (0.8, +)
-Demand -> Investment (0.6, +)
-Investment -> Debt (0.4, +)
-Debt -> Investment (0.3, -)
+1: "Node A"
+2: "Node B"
+3: "Node C"
+4: "Node D"`,
+            'population': `1 -> 2 (0.7, +)
+2 -> 1 (0.8, +)
+1 -> 3 (0.4, +)
+3 -> 1 (0.6, -)
+1 -> 4 (0.5, -)
+4 -> 3 (0.3, +)
 
-Investment: 60
-Jobs: 40
-Income: 45
-Consumption: 50
-Demand: 55
-Debt: 20`,
-            'climate': `CO2Emissions -> Temperature (0.8, +)
-Temperature -> IceMelting (0.9, +)
-IceMelting -> SeaLevel (0.7, +)
-Temperature -> Droughts (0.6, +)
-Droughts -> FoodProduction (0.8, -)
-FoodProduction -> CO2Emissions (0.4, +)
-SeaLevel -> CoastalAreas (0.9, -)
-CoastalAreas -> Refugees (0.7, +)
+1: 50 (5)
+2: 30 (5)
+3: 20 (5)
+4: 70 (5)
 
-CO2Emissions: 70
-Temperature: 45
-IceMelting: 30
-SeaLevel: 25
-Droughts: 35
-FoodProduction: 60
-CoastalAreas: 80
-Refugees: 15`,
-            'organization': `Training -> Skills (0.9, +)
-Skills -> Performance (0.8, +)
-Performance -> Revenue (0.7, +)
-Revenue -> Training (0.5, +)
-Performance -> Confidence (0.6, +)
-Confidence -> Innovation (0.7, +)
-Innovation -> Performance (0.8, +)
-Innovation -> Risk (0.4, +)
-Risk -> Confidence (0.3, -)
+1: "Population"
+2: "Birth Rate"
+3: "Death Rate"
+4: "Resources"`,
+            'economic': `1 -> 2 (0.8, +)
+2 -> 3 (0.9, +)
+3 -> 4 (0.7, +)
+4 -> 5 (0.8, +)
+5 -> 1 (0.6, +)
+1 -> 6 (0.4, +)
+6 -> 1 (0.3, -)
 
-Training: 40
-Skills: 35
-Performance: 50
-Revenue: 45
-Confidence: 60
-Innovation: 30
-Risk: 25`
+1: 60 (5)
+2: 40 (5)
+3: 45 (5)
+4: 50 (5)
+5: 55 (5)
+6: 20 (5)
+
+1: "Investment"
+2: "Jobs"
+3: "Income"
+4: "Consumption"
+5: "Demand"
+6: "Debt"`,
+            'climate': `1 -> 2 (0.8, +)
+2 -> 3 (0.9, +)
+3 -> 4 (0.7, +)
+2 -> 5 (0.6, +)
+5 -> 6 (0.8, -)
+6 -> 1 (0.4, +)
+4 -> 7 (0.9, -)
+7 -> 8 (0.7, +)
+
+1: 70 (5)
+2: 45 (5)
+3: 30 (5)
+4: 25 (5)
+5: 35 (5)
+6: 60 (5)
+7: 80 (5)
+8: 15 (5)
+
+1: "CO2 Emissions"
+2: "Temperature"
+3: "Ice Melting"
+4: "Sea Level"
+5: "Droughts"
+6: "Food Production"
+7: "Coastal Areas"
+8: "Refugees"`,
+            'organization': `1 -> 2 (0.9, +)
+2 -> 3 (0.8, +)
+3 -> 4 (0.7, +)
+4 -> 1 (0.5, +)
+3 -> 5 (0.6, +)
+5 -> 6 (0.7, +)
+6 -> 3 (0.8, +)
+6 -> 7 (0.4, +)
+7 -> 5 (0.3, -)
+
+1: 40 (5)
+2: 35 (5)
+3: 50 (5)
+4: 45 (5)
+5: 60 (5)
+6: 30 (5)
+7: 25 (5)
+
+1: "Training"
+2: "Skills"
+3: "Performance"
+4: "Revenue"
+5: "Confidence"
+6: "Innovation"
+7: "Risk"`
         };
 
         if (examples[exampleType]) {
@@ -838,32 +841,42 @@ Risk: 25`
         const connections = [];
         const nodeValues = new Map();
         const perturbationAmounts = new Map();
+        const nodeLabels = new Map();
         
         lines.forEach(line => {
-            // Parse connections: A -> B (0.8, +)
-            const connectionMatch = line.match(/(\w+)\s*->\s*(\w+)\s*\(([0-9.]+),\s*([+-])\)/);
+            // Parse connections: 1 -> 2 (0.8, +)
+            const connectionMatch = line.match(/(\d+)\s*->\s*(\d+)\s*\(([0-9.]+),\s*([+-])\)/);
             if (connectionMatch) {
                 const [, source, target, multiplier, polarity] = connectionMatch;
                 connections.push({
-                    source: source,
-                    target: target,
+                    source: parseInt(source),
+                    target: parseInt(target),
                     multiplier: parseFloat(multiplier),
                     polarity: polarity
                 });
                 return;
             }
             
-            // Parse node values with optional perturbation: A: 50 (5) or A: 50
-            const valueMatch = line.match(/(\w+):\s*([0-9.]+)(?:\s*\(([0-9.]+)\))?/);
+            // Parse node values with optional perturbation: 1: 50 (5) or 1: 50
+            const valueMatch = line.match(/(\d+):\s*([0-9.]+)(?:\s*\(([0-9.]+)\))?/);
             if (valueMatch) {
-                const [, node, value, perturbAmount] = valueMatch;
-                nodeValues.set(node, parseFloat(value));
-                perturbationAmounts.set(node, perturbAmount ? parseFloat(perturbAmount) : 5); // Default to 5
+                const [, nodeIndex, value, perturbAmount] = valueMatch;
+                const index = parseInt(nodeIndex);
+                nodeValues.set(index, parseFloat(value));
+                perturbationAmounts.set(index, perturbAmount ? parseFloat(perturbAmount) : 5); // Default to 5
+                return;
+            }
+            
+            // Parse node labels: 1: "Node 1"
+            const labelMatch = line.match(/(\d+):\s*"([^"]+)"/);
+            if (labelMatch) {
+                const [, nodeIndex, label] = labelMatch;
+                nodeLabels.set(parseInt(nodeIndex), label);
                 return;
             }
         });
         
-        return { connections, nodeValues, perturbationAmounts };
+        return { connections, nodeValues, perturbationAmounts, nodeLabels };
     }
 
     buildGraphFromText() {
@@ -874,40 +887,44 @@ Risk: 25`
         }
 
         try {
-            const { connections, nodeValues, perturbationAmounts } = this.parseGraphText(input);
-            this.buildGraph(connections, nodeValues, perturbationAmounts);
+            const { connections, nodeValues, perturbationAmounts, nodeLabels } = this.parseGraphText(input);
+            this.buildGraph(connections, nodeValues, perturbationAmounts, nodeLabels);
         } catch (error) {
             alert('Error parsing graph definition: ' + error.message);
         }
     }
 
-    buildGraph(connections, nodeValues, perturbationAmounts = new Map()) {
+    buildGraph(connections, nodeValues, perturbationAmounts = new Map(), nodeLabels = new Map()) {
         // Clear existing graph
         this.nodes.clear();
         this.edges = [];
         this.graphContent.innerHTML = '';
         
-        // Extract unique node names
-        const nodeNames = new Set();
+        // Extract unique node indices
+        const nodeIndices = new Set();
         connections.forEach(conn => {
-            nodeNames.add(conn.source);
-            nodeNames.add(conn.target);
+            nodeIndices.add(conn.source);
+            nodeIndices.add(conn.target);
         });
-        nodeValues.forEach((value, name) => nodeNames.add(name));
+        nodeValues.forEach((value, index) => nodeIndices.add(index));
+        nodeLabels.forEach((label, index) => nodeIndices.add(index));
         
-        // Create nodes
-        nodeNames.forEach(name => {
-            const value = nodeValues.get(name) || 50; // Default value
-            const perturbAmount = perturbationAmounts.get(name) || 5; // Default perturbation
-            this.nodes.set(name, {
-                name: name,
+        // Create nodes using indices as keys
+        nodeIndices.forEach(index => {
+            const value = nodeValues.get(index) || 50; // Default value
+            const perturbAmount = perturbationAmounts.get(index) || 5; // Default perturbation
+            const label = nodeLabels.get(index) || `Node ${index}`; // Default label
+            
+            this.nodes.set(index, {
+                name: index,
+                label: label,
                 value: value,
                 perturbationAmount: perturbAmount,
                 x: undefined, // Will be set by positionNodes
                 y: undefined, // Will be set by positionNodes
                 element: null
             });
-            this.originalValues.set(name, value);
+            this.originalValues.set(index, value);
         });
         
         // Store connections as edges
@@ -1112,7 +1129,7 @@ Risk: 25`
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', node.x);
         label.setAttribute('y', node.y - 5);
-        label.textContent = node.name;
+        label.textContent = node.label || `Node ${node.name}`;
         label.classList.add('node-text');
         group.appendChild(label);
         
@@ -1186,7 +1203,7 @@ Risk: 25`
             controlDiv.classList.add('node-control');
             
             const label = document.createElement('label');
-            label.textContent = name + ':';
+            label.textContent = (node.label || `Node ${name}`) + ':';
             
             const slider = document.createElement('input');
             slider.type = 'range';

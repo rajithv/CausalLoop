@@ -628,6 +628,39 @@ input[type="range"] {
     border-radius: 6px;
 }
 
+.node-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.node-index {
+    flex: 0 0 auto;
+    font-weight: bold;
+    color: #667eea;
+    background: #f0f4ff;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.node-label-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.node-label-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
 .node-number {
     flex: 0 0 30px;
     font-weight: bold;
