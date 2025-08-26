@@ -143,10 +143,11 @@ class CausalLoopDiagram {
         const nodeId = this.nextNodeId++;
         const nodeData = {
             id: nodeId,
-            label: `Node ${nodeId}`,
+            label: `${nodeId}`,
             value: 50,
             perturbationAmount: 5,
-            color: '#667eea'
+            color: '#667eea',
+            icon: null // Will store base64 data URL for the icon
         };
         
         this.visualNodes.push(nodeData);
@@ -204,16 +205,29 @@ class CausalLoopDiagram {
             nodeItem.classList.add('node-item');
             
             nodeItem.innerHTML = `
-                <div class="node-number">${node.id}</div>
-                <input type="text" class="node-input" value="${node.label}" 
-                       placeholder="Node label" onchange="app.updateNodeLabel(${node.id}, this.value)">
-                <input type="color" class="color-input" value="${node.color}" title="Node Color"
-                       onchange="app.updateNodeColor(${node.id}, this.value)">
-                <input type="number" class="value-input" value="${node.value}" min="0" max="100"
-                       title="Initial Value" onchange="app.updateNodeValue(${node.id}, this.value)">
-                <input type="number" class="perturb-input" value="${node.perturbationAmount}" min="0.1" max="50" step="0.1"
-                       title="Perturbation Amount" onchange="app.updateNodePerturbation(${node.id}, this.value)">
-                <button class="remove-node-btn" onclick="app.removeNode(${node.id})">×</button>
+                <div class="node-header">
+                    <div class="node-index">${node.id}</div>
+                    <input type="text" class="node-label-input" value="${node.label}" 
+                           placeholder="Node label" onchange="app.updateNodeLabel(${node.id}, this.value)">
+                </div>
+                <div class="node-controls-row">
+                    <input type="color" class="color-input" value="${node.color}" title="Node Color"
+                           onchange="app.updateNodeColor(${node.id}, this.value)">
+                    <input type="number" class="value-input" value="${node.value}" min="0" max="100"
+                           title="Initial Value" onchange="app.updateNodeValue(${node.id}, this.value)">
+                    <input type="number" class="perturb-input" value="${node.perturbationAmount}" min="0.1" max="50" step="0.1"
+                           title="Perturbation Amount" onchange="app.updateNodePerturbation(${node.id}, this.value)">
+                </div>
+                <div class="icon-upload-section">
+                    <label class="icon-label">Icon:</label>
+                    <input type="file" class="icon-input" accept="image/*" 
+                           onchange="app.updateNodeIcon(${node.id}, this)" title="Upload icon (optional)">
+                    <div class="icon-preview" id="icon-preview-${node.id}">
+                        ${node.icon ? `<img src="${node.icon}" alt="Node icon" class="icon-preview-img">` : ''}
+                    </div>
+                    ${node.icon ? `<button class="remove-icon-btn" onclick="app.removeNodeIcon(${node.id})" title="Remove icon">×</button>` : ''}
+                </div>
+                <button class="remove-node-btn" onclick="app.removeNode(${node.id})">Remove Node</button>
             `;
             
             container.appendChild(nodeItem);
@@ -328,6 +342,43 @@ class CausalLoopDiagram {
             this.syncToText();
         }
     }
+
+    updateNodeIcon(nodeId, fileInput) {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file.');
+            return;
+        }
+
+        // Check file size (limit to 1MB)
+        if (file.size > 1024 * 1024) {
+            alert('Image file is too large. Please select a file smaller than 1MB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const node = this.visualNodes.find(n => n.id === nodeId);
+            if (node) {
+                node.icon = e.target.result;
+                this.renderNodeList(); // Re-render to show preview
+                this.syncToText();
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    removeNodeIcon(nodeId) {
+        const node = this.visualNodes.find(n => n.id === nodeId);
+        if (node) {
+            node.icon = null;
+            this.renderNodeList(); // Re-render to remove preview
+            this.syncToText();
+        }
+    }
     
     buildGraphFromActiveTab() {
         // Determine which tab is currently active
@@ -357,12 +408,18 @@ class CausalLoopDiagram {
         const nodeValues = new Map();
         const perturbationAmounts = new Map();
         const nodeColors = new Map();
+        const nodeIcons = new Map();
+        const nodeLabels = new Map();
         
         // Add nodes
         this.visualNodes.forEach(node => {
-            nodeValues.set(node.label, node.value);
-            perturbationAmounts.set(node.label, node.perturbationAmount);
-            nodeColors.set(node.label, node.color);
+            nodeValues.set(node.id, node.value);
+            perturbationAmounts.set(node.id, node.perturbationAmount);
+            nodeColors.set(node.id, node.color);
+            nodeLabels.set(node.id, node.label); // Map node ID to label
+            if (node.icon) {
+                nodeIcons.set(node.id, node.icon);
+            }
         });
         
         // Add connections from adjacency list
@@ -372,8 +429,8 @@ class CausalLoopDiagram {
             
             if (fromNode && toNode) {
                 connections.push({
-                    source: fromNode.label,
-                    target: toNode.label,
+                    source: fromNode.id,
+                    target: toNode.id,
                     multiplier: conn.multiplier,
                     polarity: conn.polarity
                 });
@@ -381,7 +438,7 @@ class CausalLoopDiagram {
         });
         
         // Build the graph
-        this.buildGraph(connections, nodeValues, perturbationAmounts, new Map(), nodeColors);
+        this.buildGraph(connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors, nodeIcons);
     }
     
     clearVisualBuilder() {
@@ -404,7 +461,7 @@ class CausalLoopDiagram {
         const text = textArea.value;
         
         try {
-            const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors } = this.parseGraphText(text);
+            const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors, nodeIcons } = this.parseGraphText(text);
             
             // Clear validation error
             textArea.classList.remove('validation-error');
@@ -418,6 +475,7 @@ class CausalLoopDiagram {
             nodeValues.forEach((value, index) => nodeIndices.add(index));
             nodeLabels.forEach((label, index) => nodeIndices.add(index));
             nodeColors.forEach((color, index) => nodeIndices.add(index));
+            nodeIcons.forEach((icon, index) => nodeIndices.add(index));
             
             // Update visual nodes (preserve existing IDs where possible)
             const oldNodes = [...this.visualNodes];
@@ -431,7 +489,7 @@ class CausalLoopDiagram {
                 // Try to find existing node with same index
                 const existingNode = oldNodes.find(n => n.id === index);
                 
-                const nodeLabel = nodeLabels.get(index) || `Node ${index}`;
+                const nodeLabel = nodeLabels.get(index) || `${index}`;
                 this.nodeLabels.set(index, nodeLabel);
                 
                 if (existingNode) {
@@ -442,7 +500,8 @@ class CausalLoopDiagram {
                         label: nodeLabel,
                         value: nodeValues.get(index) || existingNode.value,
                         perturbationAmount: perturbationAmounts.get(index) || existingNode.perturbationAmount,
-                        color: nodeColors.get(index) || existingNode.color || '#667eea'
+                        color: nodeColors.get(index) || existingNode.color || '#667eea',
+                        icon: nodeIcons.get(index) || existingNode.icon || null
                     });
                 } else {
                     // Create new node
@@ -451,7 +510,8 @@ class CausalLoopDiagram {
                         label: nodeLabel,
                         value: nodeValues.get(index) || 50,
                         perturbationAmount: perturbationAmounts.get(index) || 5,
-                        color: nodeColors.get(index) || '#667eea'
+                        color: nodeColors.get(index) || '#667eea',
+                        icon: nodeIcons.get(index) || null
                     });
                 }
             });
@@ -537,6 +597,16 @@ class CausalLoopDiagram {
                 `${node.id}: ${node.color}`
             );
             textDefinition += colorLines.join('\n');
+        }
+        
+        // Add node icons (if any)
+        const nodesWithIcons = this.visualNodes.filter(node => node.icon);
+        if (nodesWithIcons.length > 0) {
+            textDefinition += '\n\n';
+            const iconLines = nodesWithIcons.map(node => 
+                `${node.id}: ${node.icon}`
+            );
+            textDefinition += iconLines.join('\n');
         }
         
         // Update text area
@@ -878,6 +948,7 @@ class CausalLoopDiagram {
         const perturbationAmounts = new Map();
         const nodeLabels = new Map();
         const nodeColors = new Map();
+        const nodeIcons = new Map();
         
         lines.forEach(line => {
             // Parse connections: 1 -> 2 (0.8, +)
@@ -918,9 +989,17 @@ class CausalLoopDiagram {
                 nodeColors.set(parseInt(nodeIndex), color);
                 return;
             }
+            
+            // Parse node icons: 1: data:image/...
+            const iconMatch = line.match(/(\d+):\s*(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/);
+            if (iconMatch) {
+                const [, nodeIndex, iconData] = iconMatch;
+                nodeIcons.set(parseInt(nodeIndex), iconData);
+                return;
+            }
         });
         
-        return { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors };
+        return { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors, nodeIcons };
     }
 
     buildGraphFromText() {
@@ -931,18 +1010,29 @@ class CausalLoopDiagram {
         }
 
         try {
-            const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors } = this.parseGraphText(input);
-            this.buildGraph(connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors);
+            const { connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors, nodeIcons } = this.parseGraphText(input);
+            this.buildGraph(connections, nodeValues, perturbationAmounts, nodeLabels, nodeColors, nodeIcons);
         } catch (error) {
             alert('Error parsing graph definition: ' + error.message);
         }
     }
 
-    buildGraph(connections, nodeValues, perturbationAmounts = new Map(), nodeLabels = new Map(), nodeColors = new Map()) {
+    buildGraph(connections, nodeValues, perturbationAmounts = new Map(), nodeLabels = new Map(), nodeColors = new Map(), nodeIcons = new Map()) {
         // Clear existing graph
         this.nodes.clear();
         this.edges = [];
         this.graphContent.innerHTML = '';
+        
+        // Clear only icon-related elements from SVG, not arrow markers
+        const existingIcons = this.svg.querySelectorAll('image[clip-path]');
+        existingIcons.forEach(icon => icon.remove());
+        
+        const existingDefs = this.svg.querySelector('defs');
+        if (existingDefs) {
+            // Only remove clip paths, keep arrow markers
+            const clipPaths = existingDefs.querySelectorAll('clipPath');
+            clipPaths.forEach(clipPath => clipPath.remove());
+        }
         
         // Extract unique node indices
         const nodeIndices = new Set();
@@ -953,13 +1043,15 @@ class CausalLoopDiagram {
         nodeValues.forEach((value, index) => nodeIndices.add(index));
         nodeLabels.forEach((label, index) => nodeIndices.add(index));
         nodeColors.forEach((color, index) => nodeIndices.add(index));
+        nodeIcons.forEach((icon, index) => nodeIndices.add(index));
         
         // Create nodes using indices as keys
         nodeIndices.forEach(index => {
             const value = nodeValues.get(index) || 50; // Default value
             const perturbAmount = perturbationAmounts.get(index) || 5; // Default perturbation
-            const label = nodeLabels.get(index) || `Node ${index}`; // Default label
+            const label = nodeLabels.get(index) || `${index}`; // Default label
             const color = nodeColors.get(index) || '#667eea'; // Default color
+            const icon = nodeIcons.get(index) || null; // Default no icon
             
             this.nodes.set(index, {
                 name: index,
@@ -967,6 +1059,7 @@ class CausalLoopDiagram {
                 value: value,
                 perturbationAmount: perturbAmount,
                 color: color,
+                icon: icon,
                 x: undefined, // Will be set by positionNodes
                 y: undefined, // Will be set by positionNodes
                 element: null
@@ -1159,6 +1252,46 @@ class CausalLoopDiagram {
         circle.setAttribute('stroke-width', '2');
         group.appendChild(circle);
         
+        // Add icon if present
+        if (node.icon) {
+            // Create a circular clipping path for the icon
+            const clipPathId = `clip-${node.name}`;
+            let defs = this.svg.querySelector('defs');
+            if (!defs) {
+                defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                this.svg.appendChild(defs);
+            }
+            
+            // Remove existing clipPath if it exists
+            const existingClipPath = defs.querySelector(`#${clipPathId}`);
+            if (existingClipPath) {
+                existingClipPath.remove();
+            }
+            
+            const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+            clipPath.setAttribute('id', clipPathId);
+            
+            const clipCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            clipCircle.setAttribute('cx', 0); // Relative to the group center
+            clipCircle.setAttribute('cy', 0); // Relative to the group center  
+            clipCircle.setAttribute('r', 22); // Slightly smaller than node circle
+            
+            clipPath.appendChild(clipCircle);
+            defs.appendChild(clipPath);
+            
+            const iconImage = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            iconImage.setAttribute('x', -22); // Center the 44px image (-22 to +22)
+            iconImage.setAttribute('y', -22); // Center the 44px image (-22 to +22)
+            iconImage.setAttribute('width', 44);
+            iconImage.setAttribute('height', 44);
+            iconImage.setAttribute('href', node.icon);
+            iconImage.setAttribute('clip-path', `url(#${clipPathId})`);
+            iconImage.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            iconImage.setAttribute('transform', `translate(${node.x}, ${node.y})`); // Position relative to SVG
+            iconImage.style.pointerEvents = 'none';
+            group.appendChild(iconImage);
+        }
+        
         // Increase arrow (above node)
         const increaseArrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         increaseArrow.setAttribute('points', `${node.x-8},${node.y-35} ${node.x+8},${node.y-35} ${node.x},${node.y-45}`);
@@ -1175,20 +1308,32 @@ class CausalLoopDiagram {
         decreaseArrow.setAttribute('data-action', 'decrease');
         group.appendChild(decreaseArrow);
         
-        // Node label
+        // Node label (positioned differently if there's an icon)
         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         label.setAttribute('x', node.x);
-        label.setAttribute('y', node.y - 5);
-        label.textContent = node.label || `Node ${node.name}`;
+        label.setAttribute('y', node.icon ? node.y - 30 : node.y - 5);
+        label.textContent = node.label;
         label.classList.add('node-text');
+        label.setAttribute('stroke', '#000000');
+        label.setAttribute('stroke-width', '2');
+        label.setAttribute('paint-order', 'stroke fill');
+        if (node.icon) {
+            label.setAttribute('font-size', '10');
+        }
         group.appendChild(label);
         
-        // Node value
+        // Node value (positioned differently if there's an icon)
         const value = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         value.setAttribute('x', node.x);
-        value.setAttribute('y', node.y + 8);
+        value.setAttribute('y', node.icon ? node.y + 32 : node.y + 8);
         value.textContent = Math.round(node.value);
         value.classList.add('node-value');
+        value.setAttribute('stroke', '#000000');
+        value.setAttribute('stroke-width', '0.5');
+        value.setAttribute('paint-order', 'stroke fill');
+        if (node.icon) {
+            value.setAttribute('font-size', '10');
+        }
         group.appendChild(value);
         
         node.element = group;
@@ -1247,6 +1392,9 @@ class CausalLoopDiagram {
         label.setAttribute('y', labelY);
         label.textContent = `${edge.multiplier}${edge.polarity}`;
         label.classList.add('edge-label');
+        label.setAttribute('stroke', '#ffffff');
+        label.setAttribute('stroke-width', '1');
+        label.setAttribute('paint-order', 'stroke fill');
         
         this.graphContent.appendChild(label);
         
@@ -1262,7 +1410,7 @@ class CausalLoopDiagram {
             controlDiv.classList.add('node-control');
             
             const label = document.createElement('label');
-            label.textContent = (node.label || `Node ${name}`) + ':';
+            label.textContent = (node.label || `${name}`) + ':';
             
             const slider = document.createElement('input');
             slider.type = 'range';

@@ -167,7 +167,7 @@ D: #ffa500"></textarea>
                     <h4>Getting Started:</h4>
                     <ul>
                         <li><strong>Quick Start:</strong> Use the example selector in the Graph Builder to load a pre-defined causal loop diagram</li>
-                        <li><strong>Visual Builder:</strong> Create nodes and connections using the visual interface with color pickers</li>
+                        <li><strong>Visual Builder:</strong> Create nodes and connections using the visual interface with color pickers and optional icons</li>
                         <li><strong>Text Builder:</strong> Define your graph using simple text notation including hex colors</li>
                         <li><strong>Export/Import:</strong> Save your graphs as .clg files and load them later</li>
                     </ul>
@@ -181,6 +181,7 @@ D: #ffa500"></textarea>
                         <li><strong>Perturbation Amount:</strong> Optional, defaults to 5 if not specified</li>
                         <li><strong>Node Labels:</strong> NodeName: "Display Label"</li>
                         <li><strong>Node Colors:</strong> NodeName: #hexcolor (e.g., #ff0000 for red)</li>
+                        <li><strong>Node Icons:</strong> NodeName: data:image/... (base64 encoded images, optional)</li>
                     </ul>
 
                     <h4>Example Definition:</h4>
@@ -226,7 +227,8 @@ QualityOfLife: #ff6b6b</pre>
                         <li><strong>Positive Connections:</strong> Blue arrows indicate positive relationships</li>
                         <li><strong>Negative Connections:</strong> Red arrows indicate negative relationships</li>
                         <li><strong>Connection Strength:</strong> Arrow thickness represents relationship strength</li>
-                        <li><strong>Node Colors:</strong> Nodes change color based on current values</li>
+                        <li><strong>Node Colors:</strong> Customizable colors for better categorization</li>
+                        <li><strong>Node Icons:</strong> Optional icons to represent node types visually</li>
                         <li><strong>Value Display:</strong> Current values shown on each node</li>
                     </ul>
 
@@ -264,6 +266,17 @@ QualityOfLife: #ff6b6b</pre>
                         <li><strong>File Format:</strong> Both .clg and .txt files use the same plain text format</li>
                         <li><strong>Automatic Naming:</strong> Exported files include timestamp for easy organization</li>
                         <li><strong>Validation:</strong> Import validates file format and shows errors if invalid</li>
+                        <li><strong>Icon Support:</strong> Icons are embedded as base64 data in exported files</li>
+                    </ul>
+
+                    <h4>Using Node Icons:</h4>
+                    <ul>
+                        <li><strong>Upload Icons:</strong> Click the icon upload button in the visual builder</li>
+                        <li><strong>Supported Formats:</strong> PNG, JPG, GIF, SVG, and other image formats</li>
+                        <li><strong>Size Limit:</strong> Icons must be smaller than 1MB</li>
+                        <li><strong>Auto-fitting:</strong> Icons are automatically resized and clipped to fit within nodes</li>
+                        <li><strong>Optional:</strong> Icons are completely optional - nodes work without them</li>
+                        <li><strong>Export/Import:</strong> Icons are preserved when saving and loading graphs</li>
                     </ul>
                 </div>
             </div>
